@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/jorisdejosselin/sproutvibe/compare/v1.0.0...v1.0.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* trigger initial Docker image and APK build ([23c65be](https://github.com/jorisdejosselin/sproutvibe/commit/23c65be723dc9b6f48205d3955fb449ac5860e3e))
+
 # Changelog
 
 ## [1.0.0](https://github.com/jorisdejosselin/sproutvibe/releases/tag/v1.0.0) (2026-03-25)
