@@ -1,0 +1,11 @@
+# Sprout deployment config
+# Copy to config.yml and fill in your values.
+# Mount this file into the backend container at /app/config.yml
+# (or set CONFIG_FILE env var to point to it).
+#
+# On startup, Sprout seeds these settings for the admin account.
+# They act as defaults — users can still override in the UI.
+
+integrations:
+  perenual_api_key: ""       # https://perenual.com/user/developer
+  anthropic_api_key: ""      # https://console.anthropic.com/

@@ -1,0 +1,37 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - SETTINGS_ENCRYPTION_KEY=${SETTINGS_ENCRYPTION_KEY:-}
+      - APP_VERSION=${APP_VERSION:-dev}
+      - DATABASE_URL=sqlite:////data/sprout.db
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      # Optional: create an admin account on first startup
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_NAME=${ADMIN_NAME:-Admin}
+      # Optional: Perenual plant database API (free key at perenual.com)
+      - PERENUAL_API_KEY=${PERENUAL_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_EMAIL=${VAPID_EMAIL:-mailto:admin@example.com}
+    volumes:
+      - sprout_data:/data        # SQLite database
+      - sprout_uploads:/app/uploads  # uploaded photos
+      # Optional: mount a config.yml to pre-seed API keys for the admin account
+      # - ./config.yml:/app/config.yml:ro
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+
+volumes:
+  sprout_data:
+  sprout_uploads:

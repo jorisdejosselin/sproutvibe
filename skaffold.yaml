@@ -1,0 +1,68 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: sprout
+
+build:
+  platforms:
+    - linux/amd64
+  artifacts:
+    - image: sprout-backend
+      context: backend
+    - image: sprout-frontend
+      context: frontend
+      docker:
+        buildArgs:
+          VITE_DEV_TOOLBAR: "true"
+  tagPolicy:
+    dateTime:
+      format: "2006-01-02t15-04-05"   # unique per build, no special chars — use --tag v0.1.0 for releases
+      timezone: "UTC"
+
+deploy:
+  helm:
+    releases:
+      - name: sprout-dev   # to target a different namespace: skaffold dev --namespace <ns>
+        remoteChart: app-template
+        repo: https://bjw-s-labs.github.io/helm-charts
+        version: "4.6.2"
+        namespace: sprout-dev
+        createNamespace: true
+        upgradeOnChange: true   # remote charts default to false; must be explicit
+        valuesFiles:
+          - deploy/helm-values.yaml
+          - deploy/helm-values.dev.yaml
+        setValueTemplates:
+          controllers.backend.containers.main.image.repository: "{{.IMAGE_REPO_sprout_backend}}"
+          controllers.backend.containers.main.image.tag: "{{.IMAGE_TAG_sprout_backend}}@{{.IMAGE_DIGEST_sprout_backend}}"
+          controllers.frontend.containers.main.image.repository: "{{.IMAGE_REPO_sprout_frontend}}"
+          controllers.frontend.containers.main.image.tag: "{{.IMAGE_TAG_sprout_frontend}}@{{.IMAGE_DIGEST_sprout_frontend}}"
+          controllers.frontend.containers.main.env.BACKEND_HOST.value: "{{.RELEASE}}-backend"
+          route.main.hostnames[0]: "{{.RELEASE}}.{{.BASE_DOMAIN}}"
+          route.pgweb.hostnames[0]: "{{.RELEASE}}-postgres.{{.BASE_DOMAIN}}"
+
+portForward:
+  - resourceType: service
+    resourceName: sprout-dev-frontend
+    namespace: sprout-dev
+    port: 8080
+    localPort: 8080
+
+profiles:
+  - name: postgres
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles/-
+        value: deploy/helm-values.skaffold-overlay.yaml
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.backend.containers.main.env.DATABASE_URL.value
+        value: "postgresql://sprout:sprout@{{.RELEASE}}-postgres:5432/sprout"
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.backend.initContainers.wait-for-postgres.env.POSTGRES_HOST.value
+        value: "{{.RELEASE}}-postgres"
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.pgweb.containers.main.env.PGWEB_DATABASE_URL.value
+        value: "postgres://sprout:sprout@{{.RELEASE}}-postgres:5432/sprout?sslmode=disable"
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.pgweb.initContainers.wait-for-postgres.env.POSTGRES_HOST.value
+        value: "{{.RELEASE}}-postgres"

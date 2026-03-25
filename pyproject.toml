@@ -1,0 +1,3 @@
+[tool.bandit]
+exclude_dirs = ["backend/tests", "backend/.venv"]
+skips = ["B101", "B110"]  # B101: asserts fine outside tests; B110: intentional try/except/pass for external API fallbacks

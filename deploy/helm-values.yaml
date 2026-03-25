@@ -1,0 +1,235 @@
+controllers:
+  backend:
+    strategy: Recreate
+    containers:
+      main:
+        image:
+          repository: ghcr.io/jorisdejosselin/sprout-backend
+          tag: latest
+          pullPolicy: Always
+        env:
+          JWT_SECRET:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: JWT_SECRET
+          SETTINGS_ENCRYPTION_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: SETTINGS_ENCRYPTION_KEY
+          DATABASE_URL:
+            value: "sqlite:////data/sprout.db"
+            # To use PostgreSQL, override this value with your connection string:
+            # value: "postgresql://user:password@your-postgres-host:5432/sprout"
+            # Sprout does not deploy PostgreSQL — you manage it yourself.
+          ADMIN_EMAIL:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: ADMIN_EMAIL
+          ADMIN_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: ADMIN_PASSWORD
+          ADMIN_NAME:
+            value: "Admin"
+          VAPID_PRIVATE_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: VAPID_PRIVATE_KEY
+          VAPID_PUBLIC_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: VAPID_PUBLIC_KEY
+          VAPID_EMAIL:
+            value: "mailto:admin@example.com"
+          ANTHROPIC_API_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: ANTHROPIC_API_KEY
+          PERENUAL_API_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: PERENUAL_API_KEY
+          APP_VERSION:
+            value: "latest"  # override with actual tag when deploying a specific release
+          DEV_MODE:
+            value: "false"
+          KIOSK_MODE:
+            value: "false"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+    pod:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+
+  frontend:
+    containers:
+      main:
+        image:
+          repository: ghcr.io/jorisdejosselin/sprout-frontend
+          tag: latest
+          pullPolicy: Always
+        env:
+          BACKEND_HOST:
+            value: "sprout-backend"
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+    pod:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+
+service:
+  backend:
+    controller: backend
+    ports:
+      http:
+        port: 8000
+  frontend:
+    controller: frontend
+    ports:
+      http:
+        port: 8080
+
+# ── Routing ────────────────────────────────────────────────────────────────────
+# Default: HTTPRoute (Kubernetes Gateway API). Requires a Gateway controller
+# such as Envoy Gateway, Cilium, or Istio.
+# To use a traditional Ingress instead, comment out the `route` block and
+# uncomment the `ingress` block below.
+
+route:
+  main:
+    annotations:
+      gethomepage.dev/enabled: "true"
+      gethomepage.dev/name: "SproutVibe"
+      gethomepage.dev/description: "Plant care tracker"
+      gethomepage.dev/group: "Personal"
+      gethomepage.dev/icon: "mdi-leaf"
+    parentRefs:
+      - name: envoy-gateway          # Name of your Gateway resource
+        namespace: envoy-gateway-system
+        sectionName: https           # Listener section (http or https)
+    hostnames:
+      - sprout.example.com
+    rules:
+      - backendRefs:
+          - identifier: frontend
+            port: http
+        matches:
+          - path:
+              type: PathPrefix
+              value: /
+
+# ingress:
+#   main:
+#     enabled: true
+#     className: "nginx"             # Your ingress class (nginx, haproxy, traefik, …)
+#     annotations:
+#       gethomepage.dev/enabled: "true"
+#       gethomepage.dev/name: "SproutVibe"
+#       gethomepage.dev/description: "Plant care tracker"
+#       gethomepage.dev/group: "Personal"
+#       gethomepage.dev/icon: "mdi-leaf"
+#     hosts:
+#       - host: sprout.example.com
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             service:
+#               identifier: frontend
+#               port: http
+
+configMaps:
+  nginx-conf:
+    enabled: true
+    data:
+      default.conf.template: |
+        server {
+            listen 8080;
+            client_max_body_size 10m;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            location /api/ {
+                proxy_pass http://${BACKEND_HOST}:8000/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            location /uploads/ {
+                proxy_pass http://${BACKEND_HOST}:8000/uploads/;
+                proxy_set_header Host $host;
+            }
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+
+persistence:
+  data:
+    # SQLite database volume. Not needed if using an external PostgreSQL database.
+    type: persistentVolumeClaim
+    storageClass: local-path
+    size: 2Gi
+    accessMode: ReadWriteOnce
+    advancedMounts:
+      backend:
+        main:
+          - path: /data
+
+  uploads:
+    type: persistentVolumeClaim
+    storageClass: local-path
+    size: 5Gi
+    accessMode: ReadWriteOnce
+    advancedMounts:
+      backend:
+        main:
+          - path: /app/uploads
+
+  nginx-config:
+    type: configMap
+    identifier: nginx-conf
+    advancedMounts:
+      frontend:
+        main:
+          - path: /etc/nginx/templates/default.conf.template
+            subPath: default.conf.template
+
+  nginx-conf-d:
+    type: emptyDir
+    advancedMounts:
+      frontend:
+        main:
+          - path: /etc/nginx/conf.d

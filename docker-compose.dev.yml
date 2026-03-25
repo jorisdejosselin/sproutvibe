@@ -1,0 +1,52 @@
+# Development environment — hot reload for both backend and frontend.
+# Usage: docker compose -f docker-compose.dev.yml up
+#
+# Backend:  source code mounted, uvicorn restarts on file changes
+# Frontend: Vite dev server with HMR at http://localhost:5173
+#
+# If you change Python dependencies (pyproject.toml), rebuild the backend image:
+#   docker compose -f docker-compose.dev.yml build backend
+
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-key}
+      - DATABASE_URL=sqlite:////data/sprout.db
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_NAME=${ADMIN_NAME:-Admin}
+      - PERENUAL_API_KEY=${PERENUAL_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_EMAIL=${VAPID_EMAIL:-mailto:admin@example.com}
+      - DEV_MODE=true
+    volumes:
+      - ./backend:/app             # live source — uvicorn --reload picks up changes
+      - sprout_data:/data
+      - sprout_uploads:/app/uploads
+      # - ./config.yml:/app/config.yml:ro
+
+  frontend:
+    image: node:24-alpine@sha256:7fddd9ddeae8196abf4a3ef2de34e11f7b1a722119f91f28ddf1e99dcafdf114
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - API_TARGET=http://backend:8000
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules  # keeps node_modules inside Docker
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  sprout_data:
+  sprout_uploads:
+  frontend_node_modules:

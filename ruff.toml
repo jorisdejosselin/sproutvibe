@@ -1,0 +1,15 @@
+src = ["backend"]
+
+[lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = [
+  "E501",  # line too long — handled by formatter
+  "E712",  # SQLAlchemy requires == True / == False in filter() expressions
+]
+
+[lint.per-file-ignores]
+"backend/tests/*" = ["S101"]  # assert is fine in tests
+
+[format]
+quote-style = "double"
+indent-style = "space"

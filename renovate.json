@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Amsterdam",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group non-major GitHub Actions updates and automerge",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "GitHub Actions (non-major)",
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Group non-major pre-commit hook updates and automerge",
+      "matchManagers": ["pre-commit"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "pre-commit hooks (non-major)",
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Group minor+patch Python dep updates and automerge",
+      "matchManagers": ["poetry"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Python dependencies (non-major)",
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Group minor+patch npm dep updates and automerge",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm dependencies (non-major)",
+      "automerge": true,
+      "automergeType": "branch"
+    }
+  ]
+}

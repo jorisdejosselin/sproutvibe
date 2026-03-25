@@ -1,0 +1,111 @@
+# Skaffold postgres profile overlay.
+# Adds: postgres DB, pgweb UI, initContainers on backend + pgweb.
+# DATABASE_URL, PGWEB_DATABASE_URL, and POSTGRES_HOST are injected by skaffold
+# setValueTemplates so the release name is never hardcoded here.
+controllers:
+  backend:
+    initContainers:
+      wait-for-postgres:
+        image:
+          repository: busybox
+          tag: latest
+        env:
+          POSTGRES_HOST:
+            value: _placeholder_   # overridden by skaffold: {{.RELEASE}}-postgres
+        command: [sh, -c, "until nc -zw1 $POSTGRES_HOST 5432; do echo waiting; sleep 2; done"]
+
+  postgres:
+    containers:
+      main:
+        image:
+          repository: postgres
+          tag: 16-alpine
+        env:
+          POSTGRES_USER:
+            value: sprout
+          POSTGRES_PASSWORD:
+            value: sprout
+          POSTGRES_DB:
+            value: sprout
+        probes:
+          readiness:
+            enabled: true
+            spec:
+              exec:
+                command: [pg_isready, -U, sprout]
+              initialDelaySeconds: 5
+              periodSeconds: 5
+
+  pgweb:
+    initContainers:
+      wait-for-postgres:
+        image:
+          repository: busybox
+          tag: latest
+        env:
+          POSTGRES_HOST:
+            value: _placeholder_   # overridden by skaffold: {{.RELEASE}}-postgres
+        command: [sh, -c, "until nc -zw1 $POSTGRES_HOST 5432; do echo waiting; sleep 2; done"]
+    containers:
+      main:
+        image:
+          repository: sosedoff/pgweb
+          tag: latest
+
+service:
+  postgres:
+    controller: postgres
+    ports:
+      postgres:
+        port: 5432
+  pgweb:
+    controller: pgweb
+    ports:
+      http:
+        port: 8081
+
+persistence:
+  postgres-data:
+    type: persistentVolumeClaim
+    storageClass: local-path
+    size: 2Gi
+    accessMode: ReadWriteOnce
+    advancedMounts:
+      postgres:
+        main:
+          - path: /var/lib/postgresql/data
+
+# Uses the same routing type as the main chart (route or ingress).
+# parentRefs are inherited from the base Gateway config — only the hostname is
+# overridden here; skaffold injects the actual value via setValueTemplates.
+route:
+  pgweb:
+    parentRefs:
+      - name: envoy-gateway
+        namespace: envoy-gateway-system
+        sectionName: https
+    hostnames:
+      - _placeholder_   # overridden by skaffold: {{.RELEASE}}-postgres.{{.BASE_DOMAIN}}
+    rules:
+      - backendRefs:
+          - identifier: pgweb
+            port: http
+        matches:
+          - path:
+              type: PathPrefix
+              value: /
+
+# If using Ingress instead of HTTPRoute, comment out `route.pgweb` above and
+# uncomment:
+# ingress:
+#   pgweb:
+#     enabled: true
+#     className: "nginx"
+#     hosts:
+#       - host: _placeholder_       # overridden by skaffold: {{.RELEASE}}-postgres.{{.BASE_DOMAIN}}
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             service:
+#               identifier: pgweb
+#               port: http

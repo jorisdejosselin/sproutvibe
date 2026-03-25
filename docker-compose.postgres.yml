@@ -1,0 +1,33 @@
+# Compose overlay: adds a local PostgreSQL service for development.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml -f docker-compose.postgres.yml up
+#
+# The postgres service is ephemeral (suitable for development only).
+# For production, deploy and manage your own PostgreSQL instance.
+
+services:
+  postgres:
+    image: postgres:18-alpine@sha256:4da1a4828be12604092fa55311276f08f9224a74a62dcb4708bd7439e2a03911
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sprout
+      POSTGRES_PASSWORD: sprout
+      POSTGRES_DB: sprout
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sprout"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://sprout:sprout@postgres:5432/sprout
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

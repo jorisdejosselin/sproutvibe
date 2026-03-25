@@ -1,0 +1,65 @@
+controllers:
+  backend:
+    containers:
+      main:
+        env:
+          SETTINGS_ENCRYPTION_KEY: ""  # dev: falls back to HKDF(JWT_SECRET); prod: set in sprout-secrets
+          DATABASE_URL:
+            value: "sqlite:////data/sprout.db"
+          ADMIN_NAME:
+            value: "Admin"
+          DEV_MODE:
+            value: "true"
+          KIOSK_MODE:
+            value: "false"
+    pod:
+      imagePullSecrets:
+        - name: sprout-ghcr-pull-secret
+
+  frontend:
+    containers:
+      main:
+        env:
+          BACKEND_HOST:
+            # Must match the Helm release name + "-backend".
+            # When deploying via skaffold, this is overridden by setValueTemplates ({{.RELEASE}}-backend).
+            value: "sprout-dev-backend"
+    pod:
+      imagePullSecrets:
+        - name: sprout-ghcr-pull-secret
+
+configMaps:
+  nginx-conf:
+    data:
+      default.conf.template: |
+        server {
+            listen 8080;
+            client_max_body_size 10m;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            # Dev: disable all caching so browsers always fetch fresh assets
+            add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+
+            location /api/ {
+                proxy_pass http://${BACKEND_HOST}:8000/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            location /uploads/ {
+                proxy_pass http://${BACKEND_HOST}:8000/uploads/;
+                proxy_set_header Host $host;
+            }
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+
+route:
+  main:
+    hostnames:
+      - sprout-dev.example.com

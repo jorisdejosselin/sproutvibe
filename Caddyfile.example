@@ -1,0 +1,3 @@
+sprout.example.com {
+    reverse_proxy frontend:80
+}
