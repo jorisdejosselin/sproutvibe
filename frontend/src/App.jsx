@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
-import AppSettingsProvider from './hooks/AppSettingsContext'
+import AppSettingsProvider from './hooks/AppSettingsContext.jsx'
 import { useTheme } from './hooks/useTheme'
 import { getServerUrl } from './api/client'
 import Layout from './components/Layout'
