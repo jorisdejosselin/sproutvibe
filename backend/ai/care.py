@@ -1,5 +1,7 @@
+import hashlib
 import json
 import os
+from collections.abc import Mapping
 from typing import Literal, Protocol
 
 import httpx
@@ -8,6 +10,9 @@ from sqlalchemy.orm import Session
 
 from core.crypto import decrypt_value
 from models.setting import Setting
+
+ProviderName = Literal["anthropic", "openai"]
+PROVIDER_LABELS = {"anthropic": "Anthropic", "openai": "OpenAI"}
 
 
 class PlantIdentity(BaseModel):
@@ -127,14 +132,112 @@ class AnthropicCareProvider:
             return await client.post(*args, **kwargs)
 
 
+CARE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "care_summary": {"type": ["string", "null"]},
+        "tasks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "task_type": {
+                        "type": "string",
+                        "enum": ["water", "fertilize", "mist", "repot"],
+                    },
+                    "frequency_days": {"type": "integer"},
+                    "notes": {"type": ["string", "null"]},
+                },
+                "required": ["task_type", "frequency_days", "notes"],
+            },
+        },
+    },
+    "required": ["care_summary", "tasks"],
+}
+
+
+class OpenAICareProvider:
+    default_model = "gpt-5.6-luna"
+
+    def __init__(self, client: httpx.AsyncClient | None = None):
+        self._client = client
+
+    async def recommend(
+        self,
+        plant: PlantIdentity,
+        *,
+        api_key: str,
+        model: str,
+        safety_identifier: str,
+    ) -> CareRecommendation:
+        try:
+            response = await self._post(
+                "https://api.openai.com/v1/responses",
+                headers={
+                    "authorization": f"Bearer {api_key}",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "store": False,
+                    "reasoning": {"effort": "none"},
+                    "max_output_tokens": 512,
+                    "safety_identifier": safety_identifier,
+                    "input": _prompt(plant),
+                    "text": {
+                        "format": {
+                            "type": "json_schema",
+                            "name": "care_recommendation",
+                            "strict": True,
+                            "schema": CARE_SCHEMA,
+                        }
+                    },
+                },
+            )
+        except httpx.HTTPError as exc:
+            raise CareProviderError("AI provider request failed.") from exc
+        if not response.is_success:
+            raise CareProviderError("AI provider request failed.")
+        try:
+            data = response.json()
+            content = next(
+                part["text"]
+                for item in data["output"]
+                if item.get("type") == "message"
+                for part in item.get("content", [])
+                if part.get("type") == "output_text"
+            )
+        except (
+            KeyError,
+            StopIteration,
+            TypeError,
+            json.JSONDecodeError,
+        ) as exc:
+            raise CareProviderError(
+                "AI provider returned an invalid care response."
+            ) from exc
+        return _parse_recommendation(content)
+
+    async def _post(self, *args, **kwargs) -> httpx.Response:
+        if self._client:
+            return await self._client.post(*args, **kwargs)
+        async with httpx.AsyncClient(timeout=20) as client:
+            return await client.post(*args, **kwargs)
+
+
 class CareAdvisor:
     def __init__(
         self,
         db: Session,
-        provider: CareProvider | None = None,
+        providers: Mapping[str, CareProvider] | None = None,
     ):
         self._db = db
-        self._provider = provider or AnthropicCareProvider()
+        self._providers = providers or {
+            "anthropic": AnthropicCareProvider(),
+            "openai": OpenAICareProvider(),
+        }
 
     async def recommend(
         self,
@@ -143,19 +246,52 @@ class CareAdvisor:
         user_id: int,
         allow_env_fallback: bool = True,
     ) -> CareRecommendation:
-        api_key = self._setting(user_id, "anthropic_api_key")
-        if not api_key and allow_env_fallback:
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
+        provider_name = self._setting(user_id, "ai_provider")
+        if not provider_name and allow_env_fallback:
+            provider_name = os.getenv("AI_PROVIDER")
+        if not provider_name and self._credential(
+            user_id, "anthropic", allow_env_fallback=allow_env_fallback
+        ):
+            provider_name = "anthropic"
+
+        provider = self._providers.get(provider_name or "")
+        if not provider:
             raise ProviderNotConfigured(
-                "Add an Anthropic API key in Settings."
+                "Choose an AI provider and add its API key in Settings."
             )
-        return await self._provider.recommend(
+
+        api_key = self._credential(
+            user_id, provider_name, allow_env_fallback=allow_env_fallback
+        )
+        if not api_key:
+            provider_label = PROVIDER_LABELS.get(
+                provider_name, provider_name.title()
+            )
+            raise ProviderNotConfigured(
+                f"Add an API key for {provider_label} in Settings."
+            )
+
+        model = provider.default_model
+        if allow_env_fallback:
+            model = os.getenv(f"{provider_name.upper()}_MODEL", model)
+        safety_identifier = hashlib.sha256(
+            f"sproutvibe:{user_id}".encode()
+        ).hexdigest()
+        return await provider.recommend(
             plant,
             api_key=api_key,
-            model=os.getenv("ANTHROPIC_MODEL", self._provider.default_model),
-            safety_identifier="",
+            model=model,
+            safety_identifier=safety_identifier,
         )
+
+    def _credential(
+        self, user_id: int, provider: str, *, allow_env_fallback: bool
+    ) -> str | None:
+        key = f"{provider}_api_key"
+        value = self._setting(user_id, key)
+        if value:
+            return value
+        return os.getenv(key.upper()) if allow_env_fallback else None
 
     def _setting(self, user_id: int, key: str) -> str | None:
         row = (
