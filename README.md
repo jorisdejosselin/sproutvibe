@@ -49,7 +49,11 @@ All configuration is via environment variables. Use `.env` for Docker Compose or
 | `VAPID_PRIVATE_KEY` | No | VAPID private key — required for push notifications |
 | `VAPID_PUBLIC_KEY` | No | VAPID public key — required for push notifications |
 | `VAPID_EMAIL` | No | VAPID contact address, e.g. `mailto:admin@example.com` |
-| `ANTHROPIC_API_KEY` | No | Anthropic API key for AI-powered care suggestions |
+| `AI_PROVIDER` | No | AI care provider: `anthropic` or `openai` |
+| `ANTHROPIC_API_KEY` | No | Anthropic API key for AI care suggestions |
+| `ANTHROPIC_MODEL` | No | Anthropic model (default: `claude-haiku-4-5-20251001`) |
+| `OPENAI_API_KEY` | No | OpenAI API key for AI care suggestions |
+| `OPENAI_MODEL` | No | OpenAI model (default: `gpt-5.6-luna`) |
 | `PERENUAL_API_KEY` | No | Perenual API key for plant species search |
 | `DEV_MODE` | No | Set to `true` to enable `/dev/*` debug endpoints (never in production) |
 
@@ -151,7 +155,9 @@ kubectl apply -f tmp/sprout-secrets.yaml
 ```
 
 The secret must be named `sprout-secrets` in the `sprout` namespace and contain:
-`JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `ANTHROPIC_API_KEY`, `PERENUAL_API_KEY`.
+`JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `VAPID_PRIVATE_KEY`,
+`VAPID_PUBLIC_KEY`, `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+`PERENUAL_API_KEY`.
 
 **2. Customize Helm values**
 

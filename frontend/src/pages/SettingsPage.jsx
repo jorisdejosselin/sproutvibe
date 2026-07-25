@@ -31,18 +31,24 @@ const INTEGRATIONS = [
     ],
     test: async () => { await getSpecies('609e2c34ca233f0aecfa9707', 'floracodex') },
   },
-  {
-    id: 'anthropic',
-    name: 'Anthropic (Claude AI)',
-    description: 'Uses Claude to generate watering schedules, fertilizing reminders, and care tips for any plant — automatically when you add a new plant.',
-    signupUrl: 'https://console.anthropic.com/',
-    docsUrl: 'https://docs.anthropic.com/',
-    fields: [
-      { key: 'anthropic_api_key', label: 'API Key', placeholder: 'sk-ant-...', secret: true },
-    ],
-    test: async () => { await getAiCare('Monstera', 'Monstera deliciosa') },
-  },
 ]
+
+const AI_PROVIDERS = {
+  anthropic: {
+    name: 'Anthropic',
+    model: 'Claude Haiku 4.5',
+    key: 'anthropic_api_key',
+    placeholder: 'sk-ant-...',
+    signupUrl: 'https://console.anthropic.com/',
+  },
+  openai: {
+    name: 'OpenAI',
+    model: 'GPT-5.6 Luna',
+    key: 'openai_api_key',
+    placeholder: 'sk-...',
+    signupUrl: 'https://platform.openai.com/api-keys',
+  },
+}
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -217,6 +223,94 @@ function NotificationRemindersSection({ settings, onSaved }) {
 
       {status === 'saved' && <p className="text-xs text-green-600">✓ Saved</p>}
       {status === 'error' && <p className="text-xs text-red-500">✗ Failed to save</p>}
+    </div>
+  )
+}
+
+function AIProviderSection({ initialValues, onSaved }) {
+  const initialProvider = AI_PROVIDERS[initialValues.ai_provider]
+    ? initialValues.ai_provider
+    : 'anthropic'
+  const [provider, setProvider] = useState(initialProvider)
+  const [keys, setKeys] = useState({
+    anthropic_api_key: initialValues.anthropic_api_key || '',
+    openai_api_key: initialValues.openai_api_key || '',
+  })
+  const [showKey, setShowKey] = useState(false)
+  const [busy, setBusy] = useState(null)
+  const [status, setStatus] = useState(null)
+  const selected = AI_PROVIDERS[provider]
+  const values = { ai_provider: provider, [selected.key]: keys[selected.key] }
+
+  const save = async (test = false) => {
+    setBusy(test ? 'test' : 'save')
+    setStatus(null)
+    try {
+      await saveSettings(values)
+      onSaved(values)
+      if (test) await getAiCare('Monstera', 'Monstera deliciosa')
+      setStatus({ ok: true, message: test ? 'Connection successful!' : 'Settings saved.' })
+    } catch (err) {
+      setStatus({
+        ok: false,
+        message: err.response?.data?.detail || (test ? 'Connection failed. Check your API key.' : 'Failed to save.'),
+      })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
+      <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100">AI care provider</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Generates schedules and care tips when species data is unavailable. Provider choice is explicit; requests never fail over.
+        </p>
+      </div>
+      <div className="p-5 space-y-4">
+        <div>
+          <label htmlFor="ai-provider" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Provider</label>
+          <select
+            id="ai-provider"
+            value={provider}
+            onChange={e => { setProvider(e.target.value); setStatus(null) }}
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          >
+            {Object.entries(AI_PROVIDERS).map(([id, option]) => (
+              <option key={id} value={id}>{option.name} — {option.model}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <div className="flex justify-between mb-1">
+            <label htmlFor="ai-api-key" className="text-sm font-medium text-gray-700 dark:text-gray-300">{selected.name} API key</label>
+            <a href={selected.signupUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">Get API key →</a>
+          </div>
+          <div className="relative">
+            <input
+              id="ai-api-key"
+              type={showKey ? 'text' : 'password'}
+              value={keys[selected.key]}
+              onChange={e => setKeys(current => ({ ...current, [selected.key]: e.target.value }))}
+              placeholder={selected.placeholder}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            <button type="button" onClick={() => setShowKey(value => !value)} className="absolute right-3 top-2.5 text-gray-400 text-xs">
+              {showKey ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
+        {status && <p className={`text-sm ${status.ok ? 'text-green-600' : 'text-red-500'}`}>{status.ok ? '✓ ' : '✗ '}{status.message}</p>}
+        <div className="flex gap-2">
+          <button onClick={() => save()} disabled={busy} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
+            {busy === 'save' ? 'Saving…' : 'Save'}
+          </button>
+          <button onClick={() => save(true)} disabled={busy || !keys[selected.key]} className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40">
+            {busy === 'test' ? 'Testing…' : 'Test connection'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -526,6 +620,10 @@ export default function SettingsPage({ theme, setTheme }) {
             </span>
           )}
         </p>
+        <AIProviderSection
+          initialValues={settings}
+          onSaved={updated => setSettings(s => ({ ...s, ...updated }))}
+        />
         <div className="space-y-4">
           {INTEGRATIONS.map(integration => (
             <IntegrationCard

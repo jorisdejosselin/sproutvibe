@@ -69,6 +69,8 @@ VAPID_EMAIL=$(prompt "VAPID_EMAIL" "VAPID contact email (mailto:...)" "mailto:${
 echo >&2
 echo "Optional — press Enter to skip:" >&2
 ANTHROPIC_API_KEY=$(prompt "ANTHROPIC_API_KEY" "Anthropic API key (for AI care suggestions)")
+OPENAI_API_KEY=$(prompt "OPENAI_API_KEY" "OpenAI API key (for AI care suggestions)")
+AI_PROVIDER=$(prompt "AI_PROVIDER" "AI provider (anthropic/openai)" "anthropic")
 PERENUAL_API_KEY=$(prompt "PERENUAL_API_KEY" "Perenual API key (for species search)")
 
 # ── output ────────────────────────────────────────────────────────────────────
@@ -83,6 +85,8 @@ VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
 VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
 VAPID_EMAIL=${VAPID_EMAIL}
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+OPENAI_API_KEY=${OPENAI_API_KEY}
+AI_PROVIDER=${AI_PROVIDER}
 PERENUAL_API_KEY=${PERENUAL_API_KEY}
 "
 
@@ -112,7 +116,9 @@ data:
   ADMIN_PASSWORD: $(b64 "$ADMIN_PASSWORD")
   VAPID_PRIVATE_KEY: $(b64 "$VAPID_PRIVATE_KEY")
   VAPID_PUBLIC_KEY: $(b64 "$VAPID_PUBLIC_KEY")
+  AI_PROVIDER: $(b64 "$AI_PROVIDER")
   ANTHROPIC_API_KEY: $(b64 "$ANTHROPIC_API_KEY")
+  OPENAI_API_KEY: $(b64 "$OPENAI_API_KEY")
   PERENUAL_API_KEY: $(b64 "$PERENUAL_API_KEY")
 "
 

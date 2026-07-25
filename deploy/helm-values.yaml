@@ -52,6 +52,20 @@ controllers:
               secretKeyRef:
                 name: sprout-secrets
                 key: ANTHROPIC_API_KEY
+          AI_PROVIDER:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: AI_PROVIDER
+          ANTHROPIC_MODEL:
+            value: "claude-haiku-4-5-20251001"
+          OPENAI_API_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-secrets
+                key: OPENAI_API_KEY
+          OPENAI_MODEL:
+            value: "gpt-5.6-luna"
           PERENUAL_API_KEY:
             valueFrom:
               secretKeyRef:
