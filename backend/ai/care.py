@@ -82,7 +82,9 @@ def _parse_recommendation(content: str) -> CareRecommendation:
     try:
         return CareRecommendation.model_validate_json(content)
     except (ValidationError, ValueError) as exc:
-        raise CareProviderError("AI provider returned an invalid care response.") from exc
+        raise CareProviderError(
+            "AI provider returned an invalid care response."
+        ) from exc
 
 
 class AnthropicCareProvider:
@@ -264,9 +266,7 @@ class CareAdvisor:
             user_id, provider_name, allow_env_fallback=allow_env_fallback
         )
         if not api_key:
-            provider_label = PROVIDER_LABELS.get(
-                provider_name, provider_name.title()
-            )
+            provider_label = PROVIDER_LABELS.get(provider_name, provider_name.title())
             raise ProviderNotConfigured(
                 f"Add an API key for {provider_label} in Settings."
             )
@@ -274,9 +274,7 @@ class CareAdvisor:
         model = provider.default_model
         if allow_env_fallback:
             model = os.getenv(f"{provider_name.upper()}_MODEL", model)
-        safety_identifier = hashlib.sha256(
-            f"sproutvibe:{user_id}".encode()
-        ).hexdigest()
+        safety_identifier = hashlib.sha256(f"sproutvibe:{user_id}".encode()).hexdigest()
         return await provider.recommend(
             plant,
             api_key=api_key,

@@ -63,9 +63,9 @@ async def test_advisor_uses_explicit_openai_provider(db, test_user):
         )
     db.commit()
 
-    await CareAdvisor(
-        db, {"anthropic": anthropic, "openai": openai}
-    ).recommend(PlantIdentity(common_name="Fern"), user_id=test_user.id)
+    await CareAdvisor(db, {"anthropic": anthropic, "openai": openai}).recommend(
+        PlantIdentity(common_name="Fern"), user_id=test_user.id
+    )
 
     assert not anthropic.calls
     assert openai.calls[0][1]["api_key"] == "openai-secret"
@@ -111,9 +111,7 @@ async def test_advisor_uses_openai_branding_for_missing_key(db, test_user):
 
 
 @pytest.mark.asyncio
-async def test_demo_user_does_not_inherit_model_env(
-    db, test_user, monkeypatch
-):
+async def test_demo_user_does_not_inherit_model_env(db, test_user, monkeypatch):
     provider = FakeProvider()
     for key, value in (
         ("ai_provider", "openai"),
@@ -197,11 +195,7 @@ async def test_anthropic_provider_preserves_messages_contract():
             200,
             json={
                 "content": [
-                    {
-                        "text": json.dumps(
-                            {"care_summary": "Bright light.", "tasks": []}
-                        )
-                    }
+                    {"text": json.dumps({"care_summary": "Bright light.", "tasks": []})}
                 ]
             },
         )
