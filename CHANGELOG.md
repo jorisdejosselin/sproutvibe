@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.0.17...v1.1.0) (2026-07-31)
+
+
+### Features
+
+* add explicit AI providers ([#25](https://github.com/jorisdejosselin/sproutvibe/issues/25)) ([d6c9f88](https://github.com/jorisdejosselin/sproutvibe/commit/d6c9f88b1edc4cb5a60cda9ada04a25a3ae61e54))
+
 ## [1.0.17](https://github.com/jorisdejosselin/sproutvibe/compare/v1.0.16...v1.0.17) (2026-07-31)
 
 
