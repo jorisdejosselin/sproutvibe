@@ -52,6 +52,22 @@ jobs:
       - name: Test
         run: npm test
 
+  docker-build:
+    name: Docker image build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: backend
+            context: backend
+          - image: frontend
+            context: frontend
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build ${{ matrix.image }} image
+        run: docker build ${{ matrix.context }}
+
   pre-commit:
     name: Pre-commit hooks
     runs-on: ubuntu-latest
