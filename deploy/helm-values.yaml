@@ -18,11 +18,13 @@ controllers:
               secretKeyRef:
                 name: sprout-secrets
                 key: SETTINGS_ENCRYPTION_KEY
-          DATABASE_URL:
-            value: "sqlite:////data/sprout.db"
-            # To use PostgreSQL, override this value with your connection string:
-            # value: "postgresql://user:password@your-postgres-host:5432/sprout"
-            # Sprout does not deploy PostgreSQL — you manage it yourself.
+          # Scalar shorthand (not `value:`) so downstream values files can
+          # replace this outright — e.g. with a valueFrom.secretKeyRef —
+          # without deep-merging into the same object.
+          DATABASE_URL: "sqlite:////data/sprout.db"
+          # To use PostgreSQL, override this in your own values file:
+          # DATABASE_URL: "postgresql://user:password@your-postgres-host:5432/sprout"
+          # Sprout does not deploy PostgreSQL — you manage it yourself.
           ADMIN_EMAIL:
             valueFrom:
               secretKeyRef:

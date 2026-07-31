@@ -1,0 +1,99 @@
+# Skaffold postgres-cnpg profile overlay.
+#
+# Homelab-specific — not a generic "spin up empty Postgres" profile. Use the
+# `postgres` profile (helm-values.skaffold-overlay.yaml) for that instead.
+#
+# Postgres itself is NOT deployed here — it's the "sprout-dev" CNPG cluster in
+# postgres-clusters (see ../deploy/cnpg-dev-cluster.yaml), applied alongside
+# this Helm release via skaffold's kubectl deployer. That cluster is
+# bootstrapped as a one-time clone of prod's `sprout` cluster from its
+# existing barman backup archive, so DATABASE_URL below reads CNPG's
+# auto-generated app-user secret rather than a fixed value.
+#
+# PGWEB_DATABASE_URL/POSTGRES_HOST point at a fixed cross-namespace service
+# name (sprout-dev-rw.postgres-clusters), not skaffold setValueTemplates —
+# there's only ever one shared dev Postgres cluster, unlike the app's own
+# per-RELEASE resources.
+controllers:
+  backend:
+    containers:
+      main:
+        env:
+          DATABASE_URL:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-dev-app
+                key: uri
+    initContainers:
+      wait-for-postgres:
+        image:
+          repository: busybox
+          tag: latest
+        env:
+          POSTGRES_HOST:
+            value: sprout-dev-rw.postgres-clusters.svc.cluster.local
+        command: [sh, -c, "until nc -zw1 $POSTGRES_HOST 5432; do echo waiting; sleep 2; done"]
+
+  pgweb:
+    initContainers:
+      wait-for-postgres:
+        image:
+          repository: busybox
+          tag: latest
+        env:
+          POSTGRES_HOST:
+            value: sprout-dev-rw.postgres-clusters.svc.cluster.local
+        command: [sh, -c, "until nc -zw1 $POSTGRES_HOST 5432; do echo waiting; sleep 2; done"]
+    containers:
+      main:
+        image:
+          repository: sosedoff/pgweb
+          tag: latest
+        env:
+          PGWEB_DATABASE_URL:
+            valueFrom:
+              secretKeyRef:
+                name: sprout-dev-app
+                key: uri
+
+service:
+  pgweb:
+    controller: pgweb
+    ports:
+      http:
+        port: 8081
+
+# Uses the same routing type as the main chart (route or ingress).
+# parentRefs are inherited from the base Gateway config — only the hostname is
+# overridden here; skaffold injects the actual value via setValueTemplates.
+route:
+  pgweb:
+    parentRefs:
+      - name: envoy-gateway
+        namespace: envoy-gateway-system
+        sectionName: https
+    hostnames:
+      - _placeholder_   # overridden by skaffold: {{.RELEASE}}-postgres.{{.BASE_DOMAIN}}
+    rules:
+      - backendRefs:
+          - identifier: pgweb
+            port: http
+        matches:
+          - path:
+              type: PathPrefix
+              value: /
+
+# If using Ingress instead of HTTPRoute, comment out `route.pgweb` above and
+# uncomment:
+# ingress:
+#   pgweb:
+#     enabled: true
+#     className: "nginx"
+#     hosts:
+#       - host: _placeholder_       # overridden by skaffold: {{.RELEASE}}-postgres.{{.BASE_DOMAIN}}
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             service:
+#               identifier: pgweb
+#               port: http
