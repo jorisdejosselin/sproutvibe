@@ -1,3 +1,10 @@
+## [1.0.17](https://github.com/jorisdejosselin/sproutvibe/compare/v1.0.16...v1.0.17) (2026-07-31)
+
+
+### Bug Fixes
+
+* **frontend:** add .dockerignore to exclude node_modules from build context ([#27](https://github.com/jorisdejosselin/sproutvibe/issues/27)) ([96dd737](https://github.com/jorisdejosselin/sproutvibe/commit/96dd7373e528f05b1143bdc23b05f49c63722d51))
+
 ## [1.0.16](https://github.com/jorisdejosselin/sproutvibe/compare/v1.0.15...v1.0.16) (2026-07-16)
 
 ## [1.0.15](https://github.com/jorisdejosselin/sproutvibe/compare/v1.0.14...v1.0.15) (2026-07-12)
