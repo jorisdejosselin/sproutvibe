@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import uuid
 from datetime import datetime
@@ -10,6 +9,13 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ai import (
+    CareAdvisor,
+    CareProviderError,
+    CareRecommendation,
+    PlantIdentity,
+    ProviderNotConfigured,
+)
 from core.database import get_db
 from core.security import get_current_user
 from models.plant import Plant
@@ -259,94 +265,22 @@ async def wiki_description(
     return {"description": None, "thumbnail": None}
 
 
-class AICareRequest(BaseModel):
-    common_name: str
-    scientific_name: str | None = None
-
-
-class AICareTask(BaseModel):
-    task_type: str  # water | fertilize | mist | repot
-    frequency_days: int
-    notes: str | None = None
-
-
-class AICareResponse(BaseModel):
-    tasks: list[AICareTask]
-    care_summary: str | None = None
-
-
-@router.post("/species/ai-care", response_model=AICareResponse)
+@router.post("/species/ai-care", response_model=CareRecommendation)
 async def ai_care(
-    body: AICareRequest,
+    body: PlantIdentity,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Use Claude to generate care schedule recommendations for any plant."""
-    api_key = _resolve_api_key(
-        "anthropic_api_key",
-        current_user.id,
-        db,
-        allow_env_fallback=not current_user.is_demo,
-    )
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="No AI provider configured. Add your Anthropic API key in Settings.",
-        )
-
-    plant_label = (
-        f"{body.common_name} ({body.scientific_name})"
-        if body.scientific_name
-        else body.common_name
-    )
-    prompt = f"""You are a plant care expert. For the plant "{plant_label}", return a JSON object with care schedule recommendations for a typical home grower.
-
-Return ONLY valid JSON in exactly this structure (no extra text):
-{{
-  "care_summary": "One or two sentences on how to keep this plant happy.",
-  "tasks": [
-    {{"task_type": "water", "frequency_days": 7, "notes": "brief tip"}},
-    {{"task_type": "fertilize", "frequency_days": 30, "notes": "brief tip"}}
-  ]
-}}
-
-task_type must be one of: water, fertilize, mist, repot.
-Include only the tasks that are relevant for this plant. frequency_days must be an integer."""
-
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 512,
-                "messages": [{"role": "user", "content": prompt}],
-            },
-        )
-        if not resp.is_success:
-            # Surface the actual Anthropic error message to the client
-            try:
-                detail = resp.json().get("error", {}).get("message", resp.text)
-            except Exception:
-                detail = resp.text or f"Anthropic API returned {resp.status_code}"
-            raise HTTPException(status_code=resp.status_code, detail=detail)
-        content = resp.json()["content"][0]["text"].strip()
-
     try:
-        # Strip markdown code fences if present
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        data = json.loads(content)
-        tasks = [AICareTask(**t) for t in data.get("tasks", [])]
-        return AICareResponse(tasks=tasks, care_summary=data.get("care_summary"))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to parse AI care response.")
+        return await CareAdvisor(db).recommend(
+            body,
+            user_id=current_user.id,
+            allow_env_fallback=not current_user.is_demo,
+        )
+    except ProviderNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CareProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 async def _wikipedia_description(scientific_name: str) -> str | None:

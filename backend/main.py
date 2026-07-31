@@ -92,7 +92,7 @@ def seed_config():
     """Read config.yml (or CONFIG_FILE env var) and seed admin user's settings.
 
     Only writes a setting if no value exists yet — user changes in the UI are never overwritten.
-    Falls back to environment variables (ANTHROPIC_API_KEY, PERENUAL_API_KEY) when no config file exists.
+    Falls back to environment variables when no config file exists.
     """
     # Collect integrations from config.yml first, then fall back to env vars
     integrations = {}
@@ -108,7 +108,9 @@ def seed_config():
 
     # Fill in any missing keys from environment variables
     env_map = {
+        "ai_provider": "AI_PROVIDER",
         "anthropic_api_key": "ANTHROPIC_API_KEY",
+        "openai_api_key": "OPENAI_API_KEY",
         "perenual_api_key": "PERENUAL_API_KEY",
     }
     for setting_key, env_var in env_map.items():
