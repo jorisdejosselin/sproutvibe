@@ -90,6 +90,13 @@ profiles:
         value:
           rawYaml:
             - deploy/cnpg-dev-cluster.yaml
+      # Pinned explicitly: cnpg-dev-cluster.yaml hardcodes
+      # `namespace: postgres-clusters`, and kubectl refuses to apply when
+      # that's different from whatever the ambient kubeconfig context's
+      # default namespace happens to be — it doesn't just defer to the
+      # manifest. Without this, it silently fails whenever your current
+      # context's namespace isn't postgres-clusters.
       - op: add
         path: /deploy/kubectl
-        value: {}
+        value:
+          defaultNamespace: postgres-clusters
