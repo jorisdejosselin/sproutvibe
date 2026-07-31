@@ -49,11 +49,38 @@ portForward:
     localPort: 8080
 
 profiles:
+  # Generic: spins up a fresh, empty postgres:16-alpine container. Works for
+  # any self-hoster, no assumptions beyond what's already in this repo.
   - name: postgres
     patches:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: deploy/helm-values.skaffold-overlay.yaml
+      # No `.value` suffix: DATABASE_URL is scalar shorthand in the base
+      # values files (see helm-values.yaml), and --set-string can't convert
+      # an existing scalar into a map via a dotted path — it errors instead.
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.backend.containers.main.env.DATABASE_URL
+        value: "postgresql://sprout:sprout@{{.RELEASE}}-postgres:5432/sprout"
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.backend.initContainers.wait-for-postgres.env.POSTGRES_HOST.value
+        value: "{{.RELEASE}}-postgres"
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.pgweb.containers.main.env.PGWEB_DATABASE_URL.value
+        value: "postgres://sprout:sprout@{{.RELEASE}}-postgres:5432/sprout?sslmode=disable"
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/controllers.pgweb.initContainers.wait-for-postgres.env.POSTGRES_HOST.value
+        value: "{{.RELEASE}}-postgres"
+
+  # Homelab-specific: dev Postgres is a CNPG cluster cloned from prod's
+  # existing backup archive instead of starting empty. See
+  # deploy/helm-values.skaffold-overlay-cnpg.yaml and
+  # deploy/cnpg-dev-cluster.yaml for what that assumes about the cluster.
+  - name: postgres-cnpg
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/valuesFiles/-
+        value: deploy/helm-values.skaffold-overlay-cnpg.yaml
       # sprout-dev CNPG cluster (postgres-clusters ns) — cloned from prod on
       # first create; see deploy/cnpg-dev-cluster.yaml. DATABASE_URL and the
       # wait-for-postgres host are set directly in the overlay values file
