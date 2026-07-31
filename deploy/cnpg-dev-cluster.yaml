@@ -1,0 +1,42 @@
+# Dev Postgres cluster, bootstrapped as a clone of prod's `sprout` CNPG cluster
+# via its existing barman WAL/base-backup archive. Deployed alongside the
+# sprout-dev Helm release when running `skaffold dev --profile postgres`.
+#
+# Lives in postgres-clusters (not sprout-dev) to match how every other CNPG
+# cluster in this homelab is organized. Recovery only happens once, on first
+# create — skaffold's kubectl deploy is idempotent, so re-running
+# `skaffold dev` afterwards just reuses the existing cluster/PVC.
+#
+# This cluster does not run its own continuous backups (no `spec.backup`) —
+# it's a disposable dev clone, not something we need to protect independently.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: sprout-dev
+  namespace: postgres-clusters
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.1-system-trixie
+  storage:
+    storageClass: local-path
+    size: 5Gi
+  bootstrap:
+    recovery:
+      source: sprout-backup
+      database: sprout
+      owner: sprout
+      secret:
+        name: sprout-dev-app
+  externalClusters:
+    - name: sprout-backup
+      barmanObjectStore:
+        destinationPath: s3://postgres-backups
+        endpointURL: http://rustfs-svc.rustfs.svc:9000
+        serverName: sprout
+        s3Credentials:
+          accessKeyId:
+            key: RUSTFS_ACCESS_KEY
+            name: rustfs-creds
+          secretAccessKey:
+            key: RUSTFS_SECRET_KEY
+            name: rustfs-creds

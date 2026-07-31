@@ -4,8 +4,10 @@ controllers:
       main:
         env:
           SETTINGS_ENCRYPTION_KEY: ""  # dev: falls back to HKDF(JWT_SECRET); prod: set in sprout-secrets
-          DATABASE_URL:
-            value: "sqlite:////data/sprout.db"
+          # Scalar shorthand (not `value:`) so the postgres profile's overlay,
+          # which sets this as a valueFrom.secretKeyRef, replaces this entry
+          # outright on merge instead of deep-merging into the same object.
+          DATABASE_URL: "sqlite:////data/sprout.db"
           ADMIN_NAME:
             value: "Admin"
           DEV_MODE:
