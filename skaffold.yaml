@@ -80,9 +80,17 @@ profiles:
   # The CNPG cluster is NOT deployed here via manifests/kubectl on purpose —
   # `skaffold dev` deletes everything it deploys on exit (Ctrl+C), which
   # would destroy the cloned cluster and force a fresh ~40s prod clone on
-  # every single dev session instead of once, ever. Run
-  # scripts/setup-postgres-cnpg.sh once beforehand; this profile only wires
-  # the app up to talk to the cluster it creates.
+  # every single dev session instead of once, ever. This profile only wires
+  # the app up to talk to the cluster.
+  #
+  # Prefer `scripts/dev-postgres-cnpg.sh` over invoking this profile
+  # directly: it creates the cluster first if it's missing. Running the
+  # profile against a missing cluster is not a clean failure — the init
+  # containers just loop `nc: bad address sprout-dev-rw...` forever.
+  #
+  # A skaffold hook can't do that job: the helm deployer has no hooks in
+  # v4beta11, and deploy.kubectl hooks fire *after* the helm deploy (and an
+  # empty kubectl deployer fails the run with "nothing to deploy").
   - name: postgres-cnpg
     patches:
       - op: add
