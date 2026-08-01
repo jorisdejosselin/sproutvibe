@@ -4,11 +4,11 @@
 # `postgres` profile (helm-values.skaffold-overlay.yaml) for that instead.
 #
 # Postgres itself is NOT deployed here — it's the "sprout-dev" CNPG cluster in
-# postgres-clusters (see ../deploy/cnpg-dev-cluster.yaml), applied alongside
-# this Helm release via skaffold's kubectl deployer. That cluster is
-# bootstrapped as a one-time clone of prod's `sprout` cluster from its
-# existing barman backup archive, so DATABASE_URL below reads CNPG's
-# auto-generated app-user secret rather than a fixed value.
+# postgres-clusters (see ../deploy/cnpg-dev-cluster.yaml), set up once via
+# scripts/setup-postgres-cnpg.sh — not by skaffold, and not by this file.
+# That cluster is bootstrapped as a one-time clone of prod's `sprout` cluster
+# from its existing barman backup archive, so DATABASE_URL below reads its
+# app-user secret (created by the setup script) rather than a fixed value.
 #
 # PGWEB_DATABASE_URL/POSTGRES_HOST point at a fixed cross-namespace service
 # name (sprout-dev-rw.postgres-clusters), not skaffold setValueTemplates —

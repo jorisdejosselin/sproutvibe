@@ -1,11 +1,12 @@
 # Dev Postgres cluster, bootstrapped as a clone of prod's `sprout` CNPG cluster
-# via its existing barman WAL/base-backup archive. Deployed alongside the
-# sprout-dev Helm release when running `skaffold dev --profile postgres`.
+# via its existing barman WAL/base-backup archive.
+#
+# Applied via scripts/setup-postgres-cnpg.sh, once, NOT by skaffold — `skaffold
+# dev` deletes everything it deploys on exit, which would destroy this and
+# force a fresh prod clone on every dev session instead of once, ever.
 #
 # Lives in postgres-clusters (not sprout-dev) to match how every other CNPG
-# cluster in this homelab is organized. Recovery only happens once, on first
-# create — skaffold's kubectl deploy is idempotent, so re-running
-# `skaffold dev` afterwards just reuses the existing cluster/PVC.
+# cluster in this homelab is organized.
 #
 # This cluster does not run its own continuous backups (no `spec.backup`) —
 # it's a disposable dev clone, not something we need to protect independently.

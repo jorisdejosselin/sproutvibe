@@ -76,27 +76,23 @@ profiles:
   # existing backup archive instead of starting empty. See
   # deploy/helm-values.skaffold-overlay-cnpg.yaml and
   # deploy/cnpg-dev-cluster.yaml for what that assumes about the cluster.
+  #
+  # The CNPG cluster is NOT deployed here via manifests/kubectl on purpose —
+  # `skaffold dev` deletes everything it deploys on exit (Ctrl+C), which
+  # would destroy the cloned cluster and force a fresh ~40s prod clone on
+  # every single dev session instead of once, ever. This profile only wires
+  # the app up to talk to the cluster.
+  #
+  # Prefer `scripts/dev-postgres-cnpg.sh` over invoking this profile
+  # directly: it creates the cluster first if it's missing. Running the
+  # profile against a missing cluster is not a clean failure — the init
+  # containers just loop `nc: bad address sprout-dev-rw...` forever.
+  #
+  # A skaffold hook can't do that job: the helm deployer has no hooks in
+  # v4beta11, and deploy.kubectl hooks fire *after* the helm deploy (and an
+  # empty kubectl deployer fails the run with "nothing to deploy").
   - name: postgres-cnpg
     patches:
       - op: add
         path: /deploy/helm/releases/0/valuesFiles/-
         value: deploy/helm-values.skaffold-overlay-cnpg.yaml
-      # sprout-dev CNPG cluster (postgres-clusters ns) — cloned from prod on
-      # first create; see deploy/cnpg-dev-cluster.yaml. DATABASE_URL and the
-      # wait-for-postgres host are set directly in the overlay values file
-      # since this cluster's name/namespace is fixed, not per-RELEASE.
-      - op: add
-        path: /manifests
-        value:
-          rawYaml:
-            - deploy/cnpg-dev-cluster.yaml
-      # Pinned explicitly: cnpg-dev-cluster.yaml hardcodes
-      # `namespace: postgres-clusters`, and kubectl refuses to apply when
-      # that's different from whatever the ambient kubeconfig context's
-      # default namespace happens to be — it doesn't just defer to the
-      # manifest. Without this, it silently fails whenever your current
-      # context's namespace isn't postgres-clusters.
-      - op: add
-        path: /deploy/kubectl
-        value:
-          defaultNamespace: postgres-clusters
