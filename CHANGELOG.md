@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.0...v1.2.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* **skaffold:** stop tearing down the CNPG dev cluster, and hanging without it ([#29](https://github.com/jorisdejosselin/sproutvibe/issues/29)) ([08c3421](https://github.com/jorisdejosselin/sproutvibe/commit/08c3421a27830ae9040e7b499fd1d120545890fb))
+
 # [1.2.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.1.2...v1.2.0) (2026-07-31)
 
 
