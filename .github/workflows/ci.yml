@@ -63,7 +63,7 @@ jobs:
           - image: frontend
             context: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build ${{ matrix.image }} image
         run: docker build ${{ matrix.context }}
