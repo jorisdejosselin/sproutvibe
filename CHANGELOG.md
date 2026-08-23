@@ -1,3 +1,5 @@
+## [1.2.10](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.9...v1.2.10) (2026-08-23)
+
 ## [1.2.9](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.8...v1.2.9) (2026-08-12)
 
 ## [1.2.8](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.7...v1.2.8) (2026-08-12)
