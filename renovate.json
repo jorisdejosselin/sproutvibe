@@ -18,6 +18,21 @@
       "description": "Keep major updates separate and manual",
       "matchUpdateTypes": ["major"],
       "automerge": false
+    },
+    {
+      "description": "CI/tooling updates never reach the shipped backend/frontend images, so they must not cut a release. renovate.json tags them `ci(deps)`, which has no releaseRule in release.config.mjs — unlike `chore(deps)`. Listed after the grouping rules so it overrides their groupName/semanticCommitType, and deliberately omits `automerge` so the major-update rule above still applies.",
+      "matchManagers": ["github-actions", "pre-commit"],
+      "groupName": "ci tooling",
+      "groupSlug": "ci-tooling",
+      "semanticCommitType": "ci"
+    },
+    {
+      "description": "The root package.json holds commitlint only — dev tooling, not shipped. frontend/package.json and backend/pyproject.toml are deliberately NOT matched here: those build the images and must keep emitting chore(deps).",
+      "matchManagers": ["npm"],
+      "matchFileNames": ["package.json"],
+      "groupName": "ci tooling",
+      "groupSlug": "ci-tooling",
+      "semanticCommitType": "ci"
     }
   ]
 }
