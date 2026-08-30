@@ -11,6 +11,28 @@
         }
       })();
     </script>
+    <script>
+      /*
+        Analytics for the public demo ONLY.
+
+        This image is what other people self-host, and prod and demo run the
+        exact same build — so an unconditional tracker here would phone home
+        from every self-hosted SproutVibe install. That would flatly
+        contradict "Your plants. Your server. Your data.", so it is gated on
+        the demo hostname and is inert everywhere else.
+
+        Self-hosted Umami, cookieless, served first-party from /stats/ so
+        adblockers do not drop it. No data-host-url: the tracker falls back to
+        its own script directory and posts to /stats/api/e on this origin.
+      */
+      if (location.hostname === 'demo.sproutvibe.net') {
+        var s = document.createElement('script');
+        s.defer = true;
+        s.src = '/stats/s.js';
+        s.setAttribute('data-website-id', 'ec9a91c4-9df4-4439-b7aa-bdac1302cd07');
+        document.head.appendChild(s);
+      }
+    </script>
     <meta name="theme-color" content="#16a34a" />
     <meta name="description" content="Track and care for your plants" />
     <link rel="manifest" href="/manifest.json" />
