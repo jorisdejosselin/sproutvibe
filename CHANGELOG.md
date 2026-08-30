@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.3.0...v1.4.0) (2026-08-30)
+
+
+### Features
+
+* **demo:** add Umami analytics to the public demo only ([#43](https://github.com/jorisdejosselin/sproutvibe/issues/43)) ([dcb84ca](https://github.com/jorisdejosselin/sproutvibe/commit/dcb84ca2090f83eeb96192d1bcbc09c5b6790dd2))
+
 # [1.3.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.11...v1.3.0) (2026-08-30)
 
 
