@@ -80,9 +80,13 @@ export function preflightServerUrl(raw, env = getEnvironment()) {
       detail:
         `This app is running on ${env.origin} (https), and blocking rules stop an ` +
         `https page from calling an http address. The request is dropped before it ` +
-        `leaves the device, which is why the browser can reach ${parsed.host} but the ` +
-        `app cannot. Serve the server over https, or reach it through a reverse proxy ` +
-        `that terminates TLS.`,
+        `leaves the device, which is why a browser can reach ${parsed.host} but this ` +
+        `app cannot. ` +
+        (env.native
+          ? `Android builds from v1.5.0 onward allow this — updating the app should fix it. ` +
+            `Otherwise serve the server over https, or put it behind a reverse proxy that ` +
+            `terminates TLS.`
+          : `Open this app from an http:// address instead, or serve the server over https.`),
     }
   }
 
