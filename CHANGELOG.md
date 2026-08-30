@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.11...v1.3.0) (2026-08-30)
+
+
+### Features
+
+* **metrics:** count demo sessions handed out ([#42](https://github.com/jorisdejosselin/sproutvibe/issues/42)) ([84be590](https://github.com/jorisdejosselin/sproutvibe/commit/84be590756bacbea8c79f63461b8b9fa9e52019b))
+
 ## [1.2.11](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.10...v1.2.11) (2026-08-30)
 
 ## [1.2.10](https://github.com/jorisdejosselin/sproutvibe/compare/v1.2.9...v1.2.10) (2026-08-23)
