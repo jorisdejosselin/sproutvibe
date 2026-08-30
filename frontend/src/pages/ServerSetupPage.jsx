@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
 import { setServerUrl } from '../api/client'
+import {
+  buildDiagnosticReport,
+  classifyConnectionError,
+  preflightServerUrl,
+} from '../api/diagnostics'
 import axios from 'axios'
 
 async function testConnection(url) {
@@ -17,7 +22,16 @@ export default function ServerSetupPage({ onConnected }) {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState(null) // null | 'checking' | 'ok' | 'error'
   const [errorMsg, setErrorMsg] = useState('')
+  const [errorDetail, setErrorDetail] = useState('')
+  const [report, setReport] = useState('')
+  const [showReport, setShowReport] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [autoDetected] = useState(false)
+
+  // Warn about a URL that cannot possibly work from this context (see #32:
+  // an http:// server is unreachable from the https:// Capacitor WebView)
+  // before the user hits Connect and gets an opaque failure.
+  const preflight = status === 'checking' ? null : preflightServerUrl(url)
 
   // Try auto-detecting: the frontend is probably served from the same origin as the API.
   // Skip localhost — that's the Capacitor WebView's own origin, not a real Sprout server.
@@ -46,14 +60,18 @@ export default function ServerSetupPage({ onConnected }) {
       setStatus('ok')
       setTimeout(() => onConnected(), 400)
     } catch (err) {
+      const target = url.trim()
+      const diagnosis = classifyConnectionError(err, target)
+      const text = buildDiagnosticReport({ url: target, err })
       setStatus('error')
-      setErrorMsg(
-        err.code === 'ECONNABORTED' || err.message.includes('timeout')
-          ? 'Connection timed out. Is the server running and reachable?'
-          : err.response
-            ? `Server returned ${err.response.status}. Check the URL.`
-            : err.message || 'Could not reach server. Check the URL and try again.'
-      )
+      setErrorMsg(diagnosis.title)
+      setErrorDetail(diagnosis.detail)
+      setReport(text)
+      setShowReport(false)
+      setCopied(false)
+      // Also to the console so it survives into adb logcat / remote debugging,
+      // which is the only way to see this on a device you do not own.
+      console.warn('[sprout] server connection failed\n' + text)
     }
   }
 
@@ -90,9 +108,48 @@ export default function ServerSetupPage({ onConnected }) {
             </p>
           </div>
 
+          {preflight && status !== 'error' && (
+            <div className={`rounded-xl p-3 text-sm border ${
+              preflight.severity === 'error'
+                ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+                : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+            }`}>
+              <p className="font-medium">⚠ {preflight.title}</p>
+              <p className="mt-1 opacity-90">{preflight.detail}</p>
+            </div>
+          )}
+
           {status === 'error' && (
             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm text-red-700 dark:text-red-400">
-              ✗ {errorMsg}
+              <p className="font-medium">✗ {errorMsg}</p>
+              {errorDetail && <p className="mt-1 opacity-90">{errorDetail}</p>}
+              {report && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowReport((v) => !v)}
+                    className="mt-2 text-xs underline hover:no-underline"
+                  >
+                    {showReport ? 'Hide' : 'Show'} connection details
+                  </button>
+                  {showReport && (
+                    <>
+                      <pre className="mt-2 p-2 rounded-lg bg-red-100/60 dark:bg-red-950/40 text-[11px] leading-relaxed overflow-x-auto whitespace-pre">{report}</pre>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(report)
+                            .then(() => setCopied(true))
+                            .catch(() => setCopied(false))
+                        }}
+                        className="mt-2 text-xs underline hover:no-underline"
+                      >
+                        {copied ? 'Copied — paste this into a bug report' : 'Copy details'}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           )}
 
