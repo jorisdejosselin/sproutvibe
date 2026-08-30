@@ -43,6 +43,41 @@ controllers:
 - **Server-level API keys are not available to demo users.** Even if `PERENUAL_API_KEY` or `ANTHROPIC_API_KEY` are set on the server, demo users cannot use them. Demo users can supply their own keys in Settings, which are stored against their account and deleted with it.
 - **A dismissible banner** is shown to demo users explaining that data resets nightly and linking to Settings for API key configuration.
 
+## Counting demo sessions
+
+Kiosk mode raises an obvious question: how many people actually try the demo?
+Web analytics answers "how many loaded the page"; this answers "how many were
+handed a demo account", which is usually the number you care about.
+
+The backend can expose a Prometheus counter, `sprout_demo_sessions_total`,
+incremented once per demo session successfully created. It is **off by
+default** — a self-hosted instance does not open an extra port unless you ask
+it to:
+
+```yaml
+controllers:
+  backend:
+    containers:
+      main:
+        env:
+          METRICS_ENABLED:
+            value: "true"
+          METRICS_PORT:            # optional, defaults to 9000
+            value: "9000"
+```
+
+Metrics are served on their own port rather than as a `/metrics` route,
+because the bundled frontend nginx proxies `/api/` straight to the backend —
+a route would be publicly reachable at `<your-host>/api/metrics`. The separate
+port is not proxied, so it stays internal to the cluster or host.
+
+The process restarts whenever you redeploy or reset the demo, which resets the
+counter, so query it with `increase()` or `rate()`:
+
+```promql
+sum(increase(sprout_demo_sessions_total[1d]))
+```
+
 ## Security considerations
 
 - Demo accounts are ephemeral and fully isolated, but they consume database space and (if you expose API keys in your deployment) could be a source of abuse. The API key isolation above prevents demo users from using your server's keys.
