@@ -16,6 +16,7 @@ import models.setting  # noqa
 import models.user  # noqa
 import models.watering  # noqa
 from core.database import Base, SessionLocal, engine
+from core.metrics import start_metrics_server
 from routes.auth import router as auth_router
 from routes.journal import router as journal_router
 from routes.notifications import router as notifications_router
@@ -364,6 +365,7 @@ async def prefetch_demo_images():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_metrics_server()
     Base.metadata.create_all(bind=engine)
     _run_migrations()
     _migrate_settings_encryption()

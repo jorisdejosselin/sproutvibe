@@ -8,6 +8,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from core.metrics import demo_sessions_total
 from core.security import (
     create_access_token,
     get_current_user,
@@ -110,6 +111,10 @@ def create_demo_session(db: Session = Depends(get_db)):
     db.flush()
     _seed_demo_plants(db, user.id, now)
     db.commit()
+
+    # After the commit, so a failed insert is not counted as a visitor.
+    demo_sessions_total.inc()
+
     return {"access_token": create_access_token({"sub": str(user.id)})}
 
 
