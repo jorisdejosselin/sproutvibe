@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.1...v1.4.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* **setup:** stop warning about mixed content on Android, where it now works ([#47](https://github.com/jorisdejosselin/sproutvibe/issues/47)) ([5038ea1](https://github.com/jorisdejosselin/sproutvibe/commit/5038ea1939955d7e47f23e4ad2f8cd5fa176952e))
+
 ## [1.4.1](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.0...v1.4.1) (2026-08-31)
 
 
