@@ -83,7 +83,7 @@ export function preflightServerUrl(raw, env = getEnvironment()) {
         `leaves the device, which is why a browser can reach ${parsed.host} but this ` +
         `app cannot. ` +
         (env.native
-          ? `Android builds from v1.5.0 onward allow this — updating the app should fix it. ` +
+          ? `Android builds from v1.4.1 onward allow this — updating the app should fix it. ` +
             `Otherwise serve the server over https, or put it behind a reverse proxy that ` +
             `terminates TLS.`
           : `Open this app from an http:// address instead, or serve the server over https.`),
