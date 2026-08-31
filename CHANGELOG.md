@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.0...v1.4.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **android:** reach plain http self-hosted servers, and explain connection failures ([#44](https://github.com/jorisdejosselin/sproutvibe/issues/44)) ([9367cff](https://github.com/jorisdejosselin/sproutvibe/commit/9367cff19e33429298811798347765b8d4307e7c)), closes [#32](https://github.com/jorisdejosselin/sproutvibe/issues/32)
+
 # [1.4.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.3.0...v1.4.0) (2026-08-30)
 
 
