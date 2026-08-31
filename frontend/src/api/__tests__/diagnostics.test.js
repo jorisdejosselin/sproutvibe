@@ -30,11 +30,22 @@ describe('parseServerUrl', () => {
   })
 })
 
-describe('preflight — the #32 case', () => {
-  it('flags an http server as unreachable from the https app shell', () => {
-    const r = preflightServerUrl('http://192.168.100.67:5055', nativeEnv)
+// Served over https, but a browser/PWA rather than the Android shell — here
+// mixed content really is blocked, because allowMixedContent is Android-only.
+const httpsPwaEnv = { ...nativeEnv, native: false, platform: 'web' }
+
+describe('preflight', () => {
+  it('does NOT warn on Android — allowMixedContent makes http work there', () => {
+    // Regression guard. The Android fix and this file shipped in the same
+    // release, so warning here is always a false positive on the very address
+    // the user is supposed to type.
+    expect(preflightServerUrl('http://192.168.100.67:5055', nativeEnv)).toBeNull()
+  })
+
+  it('warns for an https-served browser/PWA, where it is still blocked', () => {
+    const r = preflightServerUrl('http://192.168.100.67:5055', httpsPwaEnv)
     expect(r?.code).toBe('MIXED_CONTENT')
-    expect(r?.severity).toBe('error')
+    expect(r?.severity).toBe('warning')
   })
 
   it('does not flag the same url in a plain http browser, where it works', () => {
@@ -48,14 +59,25 @@ describe('preflight — the #32 case', () => {
   it('flags input with no scheme', () => {
     expect(preflightServerUrl('192.168.1.10:5055', nativeEnv)?.code).toBe('INVALID_URL')
   })
+
+  it('never mentions a version number', () => {
+    // A version written here cannot be right: it ships in the release it names.
+    const r = preflightServerUrl('http://192.168.100.67:5055', httpsPwaEnv)
+    expect(JSON.stringify(r)).not.toMatch(/v\d+\.\d+\.\d+/)
+  })
 })
 
 describe('classifyConnectionError', () => {
-  it('reports mixed content rather than a generic network failure', () => {
-    // This is the regression that matters: the reporter saw only "Network Error".
-    const r = classifyConnectionError(networkError, 'http://192.168.100.67:5055', nativeEnv)
+  it('reports mixed content rather than a generic network failure (browser/PWA)', () => {
+    // The reporter saw only "Network Error"; this is what replaced it.
+    const r = classifyConnectionError(networkError, 'http://192.168.100.67:5055', httpsPwaEnv)
     expect(r.code).toBe('MIXED_CONTENT')
     expect(r.title).not.toMatch(/network error/i)
+  })
+
+  it('on Android, a failed http connection is a plain unreachable, not mixed content', () => {
+    const r = classifyConnectionError(networkError, 'http://192.168.100.67:5055', nativeEnv)
+    expect(r.code).toBe('NO_RESPONSE')
   })
 
   it('falls back to a plain unreachable message when schemes match', () => {
@@ -85,7 +107,6 @@ describe('buildDiagnosticReport', () => {
   it('records the scheme mismatch that explains the failure', () => {
     const text = buildDiagnosticReport({ url: 'http://192.168.100.67:5055', err: networkError, env: nativeEnv })
     expect(text).toMatch(/scheme match\s+: no/)
-    expect(text).toMatch(/MIXED_CONTENT/)
     expect(text).toMatch(/platform\s+: android/)
   })
 
