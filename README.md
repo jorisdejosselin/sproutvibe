@@ -243,3 +243,9 @@ Sprout ships an MCP server that lets Claude Desktop manage your plants via natur
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, running tests, and code style guidelines.
+
+---
+
+## License
+
+[MIT](LICENSE) — do whatever you like with it.
