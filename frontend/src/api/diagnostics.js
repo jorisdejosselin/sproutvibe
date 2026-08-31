@@ -70,23 +70,29 @@ export function preflightServerUrl(raw, env = getEnvironment()) {
     }
   }
 
-  // https page -> http server. Blocked by the WebView as mixed content, and
-  // reported to JS as an indistinguishable network failure.
-  if (env.protocol === 'https:' && parsed.protocol === 'http:') {
+  // https page -> http server is mixed content, which is dropped before it
+  // reaches the network and surfaces to JS as an ordinary failure.
+  //
+  // Not on Android: capacitor.config.ts sets android.allowMixedContent, so
+  // https -> http genuinely works there. Warning anyway would be a false
+  // positive on the exact address the user should be typing — and since the
+  // Android fix and this file shipped in the same release (v1.4.1), there is
+  // no Android build where the warning would ever have been correct.
+  //
+  // Still applies to a browser or installed PWA served over https, and to iOS
+  // if that is ever shipped, since allowMixedContent is Android-only.
+  const mixedContentBlocked = env.platform !== 'android'
+  if (mixedContentBlocked && env.protocol === 'https:' && parsed.protocol === 'http:') {
     return {
       code: 'MIXED_CONTENT',
-      severity: env.native ? 'error' : 'warning',
-      title: 'The app cannot reach an http:// server from here',
+      severity: 'warning',
+      title: 'This page cannot reach an http:// server',
       detail:
-        `This app is running on ${env.origin} (https), and blocking rules stop an ` +
-        `https page from calling an http address. The request is dropped before it ` +
-        `leaves the device, which is why a browser can reach ${parsed.host} but this ` +
-        `app cannot. ` +
-        (env.native
-          ? `Android builds from v1.5.0 onward allow this — updating the app should fix it. ` +
-            `Otherwise serve the server over https, or put it behind a reverse proxy that ` +
-            `terminates TLS.`
-          : `Open this app from an http:// address instead, or serve the server over https.`),
+        `This page is served from ${env.origin} (https), and an https page is not ` +
+        `allowed to call an http address — the request is dropped before it leaves ` +
+        `the device, which is why ${parsed.host} may work in a normal browser tab ` +
+        `but not here. Open the app from an http:// address instead, or serve the ` +
+        `server over https.`,
     }
   }
 
