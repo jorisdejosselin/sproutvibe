@@ -296,12 +296,44 @@ def _run_migrations():
             return f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type}"
         return f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"
 
+    # Booleans differ per dialect: SQLite stores them as integers, PostgreSQL
+    # has a real boolean type. Declaring INTEGER on PostgreSQL produces a column
+    # the Boolean-mapped model cannot write to.
+    bool_col = (
+        "BOOLEAN NOT NULL DEFAULT FALSE" if is_pg else "INTEGER NOT NULL DEFAULT 0"
+    )
+
     migrations: list[str] = [
         _add_col("care_schedules", "notify_hour", "INTEGER NOT NULL DEFAULT 8"),
         _add_col("care_schedules", "notify_days_before", "INTEGER NOT NULL DEFAULT 0"),
-        _add_col("users", "is_demo", "INTEGER NOT NULL DEFAULT 0"),
+        _add_col("users", "is_demo", bool_col),
         _add_col("users", "demo_expires_at", "TIMESTAMP"),
     ]
+
+    if is_pg:
+        # Repair for instances upgraded before the line above was dialect-aware:
+        # is_demo exists as integer, models/user.py maps it to Boolean, and every
+        # INSERT fails with
+        #   column "is_demo" is of type integer but expression is of type boolean
+        # which breaks registration entirely. Guarded so it is a no-op once the
+        # column is already boolean, rather than throwing on every startup.
+        migrations.append(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'users'
+                      AND column_name = 'is_demo'
+                      AND data_type = 'integer'
+                ) THEN
+                    ALTER TABLE users ALTER COLUMN is_demo DROP DEFAULT;
+                    ALTER TABLE users ALTER COLUMN is_demo TYPE boolean USING is_demo <> 0;
+                    ALTER TABLE users ALTER COLUMN is_demo SET DEFAULT false;
+                END IF;
+            END $$;
+            """
+        )
     for stmt in migrations:
         try:
             with engine.connect() as conn:
