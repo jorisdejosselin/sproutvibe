@@ -1,3 +1,10 @@
+## [1.4.4](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.3...v1.4.4) (2026-09-01)
+
+
+### Bug Fixes
+
+* **db:** declare is_demo as boolean on postgres, and repair existing columns ([#49](https://github.com/jorisdejosselin/sproutvibe/issues/49)) ([1b269a6](https://github.com/jorisdejosselin/sproutvibe/commit/1b269a6811f018ccc64aa54d2ac1af335fcd27ab))
+
 ## [1.4.3](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.2...v1.4.3) (2026-09-01)
 
 ## [1.4.2](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.1...v1.4.2) (2026-08-31)
