@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.4...v1.5.0) (2026-09-02)
+
+
+### Features
+
+* **auth:** let operators close or gate self-service signup ([#50](https://github.com/jorisdejosselin/sproutvibe/issues/50)) ([5bcff24](https://github.com/jorisdejosselin/sproutvibe/commit/5bcff2482b983d356ce6d66e1cd43b32245541c9))
+
 ## [1.4.4](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.3...v1.4.4) (2026-09-01)
 
 
