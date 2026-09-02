@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.5.1...v1.6.0) (2026-09-02)
+
+
+### Features
+
+* **auth:** let users change their own password ([#52](https://github.com/jorisdejosselin/sproutvibe/issues/52)) ([4fc8975](https://github.com/jorisdejosselin/sproutvibe/commit/4fc8975c7e0e962fc92019e62610969f210f512d))
+
 ## [1.5.1](https://github.com/jorisdejosselin/sproutvibe/compare/v1.5.0...v1.5.1) (2026-09-02)
 
 # [1.5.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.4.4...v1.5.0) (2026-09-02)
