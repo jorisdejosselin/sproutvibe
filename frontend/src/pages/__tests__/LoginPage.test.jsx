@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import LoginPage from '../LoginPage'
@@ -10,6 +10,7 @@ vi.mock('../../api/auth', () => ({
   register: vi.fn(),
   getMe: vi.fn(),
   getKioskStatus: vi.fn().mockResolvedValue({ kiosk_mode: false }),
+  getRegistrationStatus: vi.fn().mockResolvedValue({ allowed: true, invite_required: false }),
   createDemoSession: vi.fn(),
 }))
 
@@ -47,7 +48,8 @@ describe('LoginPage', () => {
   it('shows name field only in register mode', async () => {
     renderLoginPage()
     expect(screen.queryByPlaceholderText('Your name')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByText('Create account'))
+    // The signup tab only appears once the server confirms signups are open.
+    await userEvent.click(await screen.findByText('Create account'))
     expect(screen.getByPlaceholderText('Your name')).toBeInTheDocument()
   })
 
@@ -74,5 +76,39 @@ describe('LoginPage', () => {
     await userEvent.click(submitBtn)
 
     expect(await screen.findByText('Invalid credentials')).toBeInTheDocument()
+  })
+})
+
+describe('LoginPage — signup gating', () => {
+  it('hides the Create account tab when the server has registration closed', async () => {
+    const { getRegistrationStatus } = await import('../../api/auth')
+    getRegistrationStatus.mockResolvedValueOnce({ allowed: false, invite_required: false })
+
+    render(
+      <MemoryRouter>
+        <AuthProvider><LoginPage /></AuthProvider>
+      </MemoryRouter>,
+    )
+
+    // The signup tab is not rendered at all, so it cannot be clicked into.
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /create account/i })).toBeNull()
+    })
+    // Signing in is still possible (submit button, not the tab).
+    expect(document.querySelector('button[type="submit"]')).toBeInTheDocument()
+  })
+
+  it('asks for an invite code when the server requires one', async () => {
+    const { getRegistrationStatus } = await import('../../api/auth')
+    getRegistrationStatus.mockResolvedValueOnce({ allowed: true, invite_required: true })
+
+    render(
+      <MemoryRouter>
+        <AuthProvider><LoginPage /></AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await userEvent.click(await screen.findByRole('button', { name: /create account/i }))
+    expect(await screen.findByPlaceholderText(/invite code/i)).toBeInTheDocument()
   })
 })

@@ -246,6 +246,31 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, running tests, and code st
 
 ---
 
+## Controlling who can sign up
+
+By default anyone who can reach your instance can create an account. If you
+expose Sprout to the internet, close signups:
+
+```yaml
+ALLOW_REGISTRATION: "false"        # no self-service signup at all
+```
+
+Or keep it open only to people you invite:
+
+```yaml
+REGISTRATION_INVITE_CODE: "some-shared-secret"
+```
+
+With a code set, the signup form asks for it and rejects anything else. With
+`ALLOW_REGISTRATION=false` the signup form is not shown at all, and the API
+refuses registration regardless of the invite code.
+
+Existing accounts and login are unaffected either way, and the default stays
+open so upgrading does not lock anyone out of an instance they are still
+setting up.
+
+---
+
 ## License
 
 [MIT](LICENSE) — do whatever you like with it.

@@ -1,6 +1,7 @@
 import os
 import uuid
 from datetime import datetime, timedelta
+from hmac import compare_digest
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -24,6 +25,7 @@ class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
+    invite_code: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -41,8 +43,38 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+def _registration_open() -> bool:
+    """Whether self-service signup is permitted at all."""
+    return os.getenv("ALLOW_REGISTRATION", "true").lower() == "true"
+
+
+def _invite_code() -> str | None:
+    """Invite code required to sign up, or None when signup needs no code."""
+    return os.getenv("REGISTRATION_INVITE_CODE") or None
+
+
+@router.get("/registration")
+def registration_status():
+    """Public endpoint — lets the login screen hide or gate the signup form."""
+    return {
+        "allowed": _registration_open(),
+        "invite_required": bool(_invite_code()),
+    }
+
+
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
+    # Checked before anything touches the database, so a closed instance
+    # cannot be probed for which emails already exist.
+    if not _registration_open():
+        raise HTTPException(
+            status_code=403, detail="Registration is disabled on this server."
+        )
+
+    expected = _invite_code()
+    if expected and not compare_digest(req.invite_code or "", expected):
+        raise HTTPException(status_code=403, detail="Invalid invite code.")
+
     if db.query(User).filter(User.email == req.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     user = User(

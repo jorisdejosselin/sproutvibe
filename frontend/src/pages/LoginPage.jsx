@@ -1,16 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { login, register, getMe, createDemoSession } from '../api/auth'
+import { login, register, getMe, createDemoSession, getRegistrationStatus } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
 import { clearServerUrl } from '../api/client'
 
 export default function LoginPage() {
   const [mode, setMode] = useState('login')
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', inviteCode: '' })
+  // Assume signup is closed until the server says otherwise, so a public
+  // instance never flashes a signup form it will refuse.
+  const [signup, setSignup] = useState({ allowed: false, invite_required: false })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signIn, kioskMode } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    getRegistrationStatus().then(setSignup)
+  }, [])
 
   const handleTryDemo = async () => {
     setError('')
@@ -33,7 +40,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      if (mode === 'register') await register(form.name, form.email, form.password)
+      if (mode === 'register') await register(form.name, form.email, form.password, form.inviteCode)
       const { access_token } = await login(form.email, form.password)
       localStorage.setItem('token', access_token)  // store before getMe so the request is authenticated
       const me = await getMe()
@@ -55,6 +62,7 @@ export default function LoginPage() {
           <p className="text-gray-500 dark:text-gray-400 text-sm">Your personal plant care companion</p>
         </div>
 
+        {signup.allowed && (
         <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1 mb-6">
           {['login', 'register'].map((m) => (
             <button
@@ -68,8 +76,20 @@ export default function LoginPage() {
             </button>
           ))}
         </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && signup.invite_required && (
+            <input
+              type="text"
+              placeholder="Invite code"
+              value={form.inviteCode}
+              onChange={(e) => setForm({ ...form, inviteCode: e.target.value })}
+              required
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+          )}
+
           {mode === 'register' && (
             <input
               type="text"
