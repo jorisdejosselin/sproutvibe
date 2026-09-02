@@ -5,7 +5,7 @@ from hmac import compare_digest
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -93,7 +93,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(user.id), "tv": user.token_version or 0})
     return {"access_token": token}
 
 
@@ -116,6 +116,33 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
+@router.post("/me/password", status_code=204)
+def change_password(
+    req: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Change your own password. Requires the current one."""
+    if current_user.is_demo:
+        raise HTTPException(
+            status_code=403, detail="Demo accounts cannot change their password."
+        )
+    if not verify_password(req.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    current_user.hashed_password = hash_password(req.new_password)
+    # Invalidates every token issued before now, including any the old password
+    # may have been used to obtain elsewhere. Tokens are valid for a year, so
+    # without this the change would not actually revoke anything.
+    current_user.token_version = (current_user.token_version or 0) + 1
+    db.commit()
 
 
 @router.get("/kiosk")
@@ -147,7 +174,11 @@ def create_demo_session(db: Session = Depends(get_db)):
     # After the commit, so a failed insert is not counted as a visitor.
     demo_sessions_total.inc()
 
-    return {"access_token": create_access_token({"sub": str(user.id)})}
+    return {
+        "access_token": create_access_token(
+            {"sub": str(user.id), "tv": user.token_version or 0}
+        )
+    }
 
 
 def _seed_demo_plants(db: Session, owner_id: int, now: datetime) -> None:

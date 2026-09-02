@@ -49,4 +49,9 @@ def get_current_user(
     user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise credentials_exception
+    # Tokens issued before the last password change are no longer valid.
+    # Absent claim means 0, so tokens minted before this existed keep working
+    # rather than logging everyone out on upgrade.
+    if payload.get("tv", 0) != (user.token_version or 0):
+        raise credentials_exception
     return user
