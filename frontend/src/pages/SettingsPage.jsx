@@ -4,7 +4,7 @@ import { useAppSettings } from '../hooks/useAppSettings'
 import { getSpecies, getAiCare } from '../api/plants'
 import { getServerUrl, clearServerUrl } from '../api/client'
 import { getVapidPublicKey, subscribeUser, unsubscribeUser } from '../api/notifications'
-import { updateMe } from '../api/auth'
+import { changePassword, updateMe } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
 
 // Each integration is defined here — add new ones by extending this array
@@ -465,6 +465,9 @@ export default function SettingsPage({ theme, setTheme }) {
   const [profileName, setProfileName] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileStatus, setProfileStatus] = useState(null)
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState('')
 
   useEffect(() => {
     if (user) setProfileName(user.name)
@@ -492,6 +495,23 @@ export default function SettingsPage({ theme, setTheme }) {
       setProfileStatus('error')
     } finally {
       setProfileSaving(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    setPwError('')
+    if (pw.next !== pw.confirm) return setPwError('New passwords do not match.')
+    if (pw.next.length < 8) return setPwError('New password must be at least 8 characters.')
+    setPwSaving(true)
+    try {
+      await changePassword(pw.current, pw.next)
+      // Every token was just invalidated, this one included, so send the user
+      // back to sign in rather than letting the next request 401 at random.
+      localStorage.removeItem('token')
+      window.location.assign('/login')
+    } catch (err) {
+      setPwError(err?.response?.data?.detail || 'Could not change password.')
+      setPwSaving(false)
     }
   }
 
@@ -523,6 +543,39 @@ export default function SettingsPage({ theme, setTheme }) {
           </div>
           {profileStatus === 'saved' && <p className="text-sm text-green-600 mt-2">✓ Name updated.</p>}
           {profileStatus === 'error' && <p className="text-sm text-red-500 mt-2">✗ Failed to save.</p>}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mt-4">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Change password</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            You will be signed out everywhere and need to sign in again.
+          </p>
+          <div className="space-y-2">
+            {[
+              { key: 'current', label: 'Current password', auto: 'current-password' },
+              { key: 'next', label: 'New password', auto: 'new-password' },
+              { key: 'confirm', label: 'Confirm new password', auto: 'new-password' },
+            ].map(f => (
+              <input
+                key={f.key}
+                type="password"
+                autoComplete={f.auto}
+                placeholder={f.label}
+                aria-label={f.label}
+                value={pw[f.key]}
+                onChange={e => { setPw({ ...pw, [f.key]: e.target.value }); setPwError('') }}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            ))}
+          </div>
+          <button
+            onClick={handleChangePassword}
+            disabled={pwSaving || !pw.current || !pw.next || !pw.confirm}
+            className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+          >
+            {pwSaving ? 'Changing…' : 'Change password'}
+          </button>
+          {pwError && <p className="text-sm text-red-500 mt-2">✗ {pwError}</p>}
         </div>
       </section>
 

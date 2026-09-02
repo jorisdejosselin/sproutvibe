@@ -308,6 +308,7 @@ def _run_migrations():
         _add_col("care_schedules", "notify_days_before", "INTEGER NOT NULL DEFAULT 0"),
         _add_col("users", "is_demo", bool_col),
         _add_col("users", "demo_expires_at", "TIMESTAMP"),
+        _add_col("users", "token_version", "INTEGER NOT NULL DEFAULT 0"),
     ]
 
     if is_pg:

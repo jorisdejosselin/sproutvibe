@@ -17,6 +17,14 @@ export const getMe = () => api.get('/auth/me').then(r => r.data)
 
 export const updateMe = (name) => api.put('/auth/me', { name }).then(r => r.data)
 
+// Changing the password invalidates every existing token, including this
+// client's, so the caller must sign in again afterwards.
+export const changePassword = (currentPassword, newPassword) =>
+  api.post('/auth/me/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  }).then(r => r.data)
+
 export const getKioskStatus = () => api.get('/auth/kiosk').then(r => r.data)
 
 // Whether this server accepts self-service signups, and whether an invite code
