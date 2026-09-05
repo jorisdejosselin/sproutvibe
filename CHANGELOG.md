@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.0...v1.6.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **test:** install the localStorage polyfill with defineProperty ([#55](https://github.com/jorisdejosselin/sproutvibe/issues/55)) ([7d03845](https://github.com/jorisdejosselin/sproutvibe/commit/7d03845ac4abf048ff327b0d81f02976120e83f6)), closes [#54](https://github.com/jorisdejosselin/sproutvibe/issues/54)
+
 # [1.6.0](https://github.com/jorisdejosselin/sproutvibe/compare/v1.5.1...v1.6.0) (2026-09-02)
 
 
