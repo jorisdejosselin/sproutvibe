@@ -27,6 +27,14 @@
       "semanticCommitType": "ci"
     },
     {
+      "description": "Python moves deliberately. CI and backend/Dockerfile must stay on the same version or CI tests a runtime that is never shipped, and the ecosystem lags new releases: 3.15 broke the build because pydantic-core has no wheel for it and PyO3 0.26 refuses to compile against an interpreter newer than 3.14. allowedVersions stops that being proposed at all rather than reopening a PR that cannot pass. Grouped so the workflow and the Dockerfile move together, and never automerged. Raise the bound once pydantic-core ships 3.15 wheels.",
+      "matchDepNames": ["python"],
+      "allowedVersions": "<3.15",
+      "groupName": "python runtime",
+      "groupSlug": "python-runtime",
+      "automerge": false
+    },
+    {
       "description": "The root package.json holds commitlint only — dev tooling, not shipped. frontend/package.json and backend/pyproject.toml are deliberately NOT matched here: those build the images and must keep emitting chore(deps).",
       "matchManagers": ["npm"],
       "matchFileNames": ["package.json"],
