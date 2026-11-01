@@ -2,6 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "timezone": "Europe/Amsterdam",
+  "description": "Renovate ships the pre-commit manager DISABLED by default, so .pre-commit-config.yaml was never looked at: a dry-run logs `pre-commit is disabled` right after it finds the file. That silently froze every hook rev (pre-commit-hooks v5.0.0, ruff v0.9.0, bandit 1.8.3) and made the `pre-commit` half of the `ci tooling` rule below dead config. Enabling it costs nothing: hook revs are not shipped, so they group as `ci(deps)` and cut no release.",
+  "pre-commit": { "enabled": true },
   "labels": ["dependencies", "chore"],
   "packageRules": [
     {
@@ -32,6 +34,15 @@
       "allowedVersions": "<3.15",
       "groupName": "python runtime",
       "groupSlug": "python-runtime",
+      "semanticCommitType": "chore",
+      "automerge": false
+    },
+    {
+      "description": "node has the same split problem python does, and it is live right now: PR #66 moves the workflow pins to node 26 under the `ci tooling` group while a separate `renovate/node-26.x` branch moves frontend/Dockerfile and docker-compose.dev.yml. Those can merge hours apart, leaving CI testing a runtime that is not shipped (or the reverse). Group them so both halves land in one reviewable PR. semanticCommitType is forced to `chore` for the same reason as python above: this group touches frontend/Dockerfile, so it genuinely ships and must still cut a release.",
+      "matchDepNames": ["node"],
+      "groupName": "node runtime",
+      "groupSlug": "node-runtime",
+      "semanticCommitType": "chore",
       "automerge": false
     },
     {
