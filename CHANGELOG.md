@@ -1,3 +1,10 @@
+## [1.6.12](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.11...v1.6.12) (2026-11-01)
+
+
+### Bug Fixes
+
+* **deps:** cap python below 3.15 and stop renovate proposing it ([#68](https://github.com/jorisdejosselin/sproutvibe/issues/68)) ([046a143](https://github.com/jorisdejosselin/sproutvibe/commit/046a14372b32bb690c6b2d84e17d902cd5bd5f5c))
+
 ## [1.6.11](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.10...v1.6.11) (2026-10-11)
 
 ## [1.6.10](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.9...v1.6.10) (2026-10-04)
