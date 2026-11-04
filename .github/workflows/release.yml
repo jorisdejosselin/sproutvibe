@@ -25,8 +25,59 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Backstop for releases that nothing asked for.
+      #
+      # renovate.json tags CI-only bumps `ci(deps)`, which release.config.mjs
+      # refuses to release. That works -- but only for branches Renovate
+      # creates *after* the rule exists. Renovate writes a branch's commit
+      # message once and will not rewrite it while the packaged files are
+      # unchanged ("No package files need updating"), so a branch opened
+      # before the rule landed keeps its old `chore(deps)` subject forever and
+      # still cuts a release for a workflow-only diff. PR #66 was exactly that:
+      # it had to be squash-merged under a hand-written subject to stay quiet.
+      # This step removes the need for that by-hand step next time.
+      #
+      # So don't trust the subject line. Look at the diff: if the push touches
+      # nothing a user can run, there is nothing to version, tag, build an
+      # image for or ship an APK of. Skipping loses nothing -- semantic-release
+      # analyses every commit since the last tag, so these commits still show
+      # up in the notes of the next real release.
+      #
+      # Fails open on purpose: if the diff can't be determined, release.
+      - name: Does this push change anything that ships?
+        id: shipped
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "Previous commit unavailable -- assuming this push ships something."
+            echo 'shipped=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only "$BEFORE" "$AFTER" > "$RUNNER_TEMP/changed.txt"
+          echo "Changed files:"
+          sed 's/^/  /' "$RUNNER_TEMP/changed.txt"
+          # Dev tooling, CI config and docs. Anything NOT listed here ships:
+          # a new product directory releases by default rather than being
+          # silently skipped. Paths are anchored, so backend/pyproject.toml
+          # and frontend/package.json still count as shipped -- only the
+          # repo-root copies (bandit config, commitlint) are dev-only.
+          grep -vE '^(\.github/|docs/|scripts/|\.gitignore$|\.pre-commit-config\.yaml$|ruff\.toml$|renovate\.json$|release\.config\.mjs$|commitlint\.config\.mjs$|package\.json$|package-lock\.json$|pyproject\.toml$|skaffold\.yaml$|skaffold\.env\.example$|uv\.lock$|LICENSE$|.*\.md$)' \
+            "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/ships.txt" || true
+          if [ -s "$RUNNER_TEMP/ships.txt" ]; then
+            echo "Ships -- a release is warranted:"
+            sed 's/^/  /' "$RUNNER_TEMP/ships.txt"
+            echo 'shipped=true' >> "$GITHUB_OUTPUT"
+          else
+            echo "Only CI/dev/docs scaffolding changed -- skipping the release."
+            echo 'shipped=false' >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run semantic-release
         id: semantic
+        if: steps.shipped.outputs.shipped == 'true'
         uses: cycjimmy/semantic-release-action@v8.1.4
         with:
           extra_plugins: |
@@ -131,7 +182,7 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: "25.0.4+101.0.LTS"
+          java-version: "25.0.5+8.0.LTS"
           distribution: temurin
 
       - name: Setup Android SDK

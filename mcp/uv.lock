@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.15"
 
 [[package]]
 name = "annotated-doc"
@@ -685,8 +685,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.0.0" },
+    { name = "httpx", specifier = "==0.28.1" },
+    { name = "mcp", extras = ["cli"], specifier = "==1.26.0" },
 ]
 
 [[package]]
