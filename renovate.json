@@ -1,14 +1,25 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended"
+  ],
   "timezone": "Europe/Amsterdam",
   "description": "Renovate ships the pre-commit manager DISABLED by default, so .pre-commit-config.yaml was never looked at: a dry-run logs `pre-commit is disabled` right after it finds the file. That silently froze every hook rev (pre-commit-hooks v5.0.0, ruff v0.9.0, bandit 1.8.3) and made the `pre-commit` half of the `ci tooling` rule below dead config. Enabling it costs nothing: hook revs are not shipped, so they group as `ci(deps)` and cut no release.",
-  "pre-commit": { "enabled": true },
-  "labels": ["dependencies", "chore"],
+  "pre-commit": {
+    "enabled": true
+  },
+  "labels": [
+    "dependencies",
+    "chore"
+  ],
   "packageRules": [
     {
       "description": "Single chore PR for all non-major dependency updates",
-      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "groupName": "chore dependencies (non-major)",
       "groupSlug": "chore-deps-non-major",
       "semanticCommitType": "chore",
@@ -18,19 +29,26 @@
     },
     {
       "description": "Keep major updates separate and manual",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false
     },
     {
-      "description": "CI/tooling updates never reach the shipped backend/frontend images, so they must not cut a release. renovate.json tags them `ci(deps)`, which has no releaseRule in release.config.mjs — unlike `chore(deps)`. Listed after the grouping rules so it overrides their groupName/semanticCommitType, and deliberately omits `automerge` so the major-update rule above still applies.",
-      "matchManagers": ["github-actions", "pre-commit"],
+      "description": "CI/tooling updates never reach the shipped backend/frontend images, so they must not cut a release. renovate.json tags them `ci(deps)`, which has no releaseRule in release.config.mjs \u2014 unlike `chore(deps)`. Listed after the grouping rules so it overrides their groupName/semanticCommitType, and deliberately omits `automerge` so the major-update rule above still applies.",
+      "matchManagers": [
+        "github-actions",
+        "pre-commit"
+      ],
       "groupName": "ci tooling",
       "groupSlug": "ci-tooling",
       "semanticCommitType": "ci"
     },
     {
       "description": "Python moves deliberately. CI and backend/Dockerfile must stay on the same version or CI tests a runtime that is never shipped, and the ecosystem lags new releases: 3.15 broke the build because pydantic-core has no wheel for it and PyO3 0.26 refuses to compile against an interpreter newer than 3.14. allowedVersions stops that being proposed at all rather than reopening a PR that cannot pass. Grouped so the workflow and the Dockerfile move together, and never automerged. Raise the bound once pydantic-core ships 3.15 wheels.",
-      "matchDepNames": ["python"],
+      "matchDepNames": [
+        "python"
+      ],
       "allowedVersions": "<3.15",
       "groupName": "python runtime",
       "groupSlug": "python-runtime",
@@ -39,16 +57,32 @@
     },
     {
       "description": "node has the same split problem python does, and it is live right now: PR #66 moves the workflow pins to node 26 under the `ci tooling` group while a separate `renovate/node-26.x` branch moves frontend/Dockerfile and docker-compose.dev.yml. Those can merge hours apart, leaving CI testing a runtime that is not shipped (or the reverse). Group them so both halves land in one reviewable PR. semanticCommitType is forced to `chore` for the same reason as python above: this group touches frontend/Dockerfile, so it genuinely ships and must still cut a release.",
-      "matchDepNames": ["node"],
+      "matchDepNames": [
+        "node"
+      ],
       "groupName": "node runtime",
       "groupSlug": "node-runtime",
       "semanticCommitType": "chore",
       "automerge": false
     },
     {
-      "description": "The root package.json holds commitlint only — dev tooling, not shipped. frontend/package.json and backend/pyproject.toml are deliberately NOT matched here: those build the images and must keep emitting chore(deps).",
-      "matchManagers": ["npm"],
-      "matchFileNames": ["package.json"],
+      "description": "Keep gradle-wrapper out of the shared non-major group. Renovate cannot run `./gradlew wrapper` on the hosted app -- the Dependency Dashboard reports \"Gradle wrapper command was requested to run, but `gradleWrapper` is not permitted in the allowedUnsafeExecutions\" -- so its artifact step fails. Every non-major batch that carried a wrapper bump (#69, #75) also arrived with a STALE frontend/package-lock.json and failed `npm ci` on four jobs, while batches without one (#64, #78) had their lockfile written correctly. Splitting it out means a failure here can no longer take the npm lockfile with it. Note #65 combined both successfully on 2026-10-05, so this is a strong correlation rather than proof -- it is also the cheapest test of it: if the next non-major batch updates its lockfile, that settles it. Only distributionUrl changes, which is safe and proven: gradle-wrapper.jar has never changed since the repo opened while distributionUrl has been bumped six times, and the APK has built on every one, including 9.9.0. automerge is off so the expected failing renovate/artifacts check is reviewed rather than silently blocking a merge queue.",
+      "matchManagers": [
+        "gradle-wrapper"
+      ],
+      "groupName": "gradle wrapper",
+      "groupSlug": "gradle-wrapper",
+      "semanticCommitType": "chore",
+      "automerge": false
+    },
+    {
+      "description": "The root package.json holds commitlint only \u2014 dev tooling, not shipped. frontend/package.json and backend/pyproject.toml are deliberately NOT matched here: those build the images and must keep emitting chore(deps).",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchFileNames": [
+        "package.json"
+      ],
       "groupName": "ci tooling",
       "groupSlug": "ci-tooling",
       "semanticCommitType": "ci"
