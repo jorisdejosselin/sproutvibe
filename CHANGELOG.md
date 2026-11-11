@@ -1,3 +1,10 @@
+## [1.6.22](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.21...v1.6.22) (2026-11-11)
+
+
+### Bug Fixes
+
+* **mcp:** upgrade to mcp 2.3.0 and migrate FastMCP to MCPServer ([#80](https://github.com/jorisdejosselin/sproutvibe/issues/80)) ([1f5379d](https://github.com/jorisdejosselin/sproutvibe/commit/1f5379dca3e8a1cf80db60e69f1c959058d2d144))
+
 ## [1.6.21](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.20...v1.6.21) (2026-11-08)
 
 ## [1.6.20](https://github.com/jorisdejosselin/sproutvibe/compare/v1.6.19...v1.6.20) (2026-11-08)
