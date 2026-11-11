@@ -52,6 +52,28 @@ jobs:
       - name: Test
         run: npm test
 
+  mcp-test:
+    name: MCP server tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        run: pip install uv==0.8.22
+
+      - name: Install dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Run tests
+        run: uv run --frozen pytest tests/ -v
+
   docker-build:
     name: Docker image build
     runs-on: ubuntu-latest
@@ -62,6 +84,8 @@ jobs:
             context: backend
           - image: frontend
             context: frontend
+          - image: mcp
+            context: mcp
     steps:
       - uses: actions/checkout@v7
 

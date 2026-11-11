@@ -1,15 +1,14 @@
-"""FastMCP server exposing Sprout plant care tools and resources."""
+"""MCP server exposing Sprout plant care tools and resources."""
 
 import asyncio
 import json
 import sys
-from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from sprout_mcp.client import SproutAPIError, SproutClient, SproutConfigError
 
-mcp = FastMCP(
+mcp = MCPServer(
     name="Sprout",
     instructions=(
         "You are connected to the Sprout plant care app. "
@@ -79,7 +78,9 @@ async def resource_plants_list() -> str:
         line = _fmt_plant(p)
         schedules = by_plant.get(p["id"], [])
         if schedules:
-            due_parts = [f"{s['task_type']} in {s.get('days_until', '?')}d" for s in schedules]
+            due_parts = [
+                f"{s['task_type']} in {s.get('days_until', '?')}d" for s in schedules
+            ]
             line += f" | Due: {', '.join(due_parts)}"
         lines.append(line)
 
@@ -137,7 +138,9 @@ async def list_plants() -> str:
         line = _fmt_plant(p)
         schedules = by_plant.get(p["id"], [])
         if schedules:
-            due_parts = [f"{s['task_type']} in {s.get('days_until', '?')}d" for s in schedules]
+            due_parts = [
+                f"{s['task_type']} in {s.get('days_until', '?')}d" for s in schedules
+            ]
             line += f" | Due: {', '.join(due_parts)}"
         lines.append(line)
 
@@ -196,7 +199,9 @@ async def add_plant(
     """
     client = get_client()
     try:
-        plant = await client.create_plant(name=name, species=species, location=location, notes=notes)
+        plant = await client.create_plant(
+            name=name, species=species, location=location, notes=notes
+        )
     except SproutAPIError as e:
         return _err(e)
     return f"Plant added! {_fmt_plant(plant)}"
@@ -398,14 +403,20 @@ async def search_species(query: str) -> str:
         if r.get("watering"):
             line += f" | Watering: {r['watering']}"
         if r.get("sunlight"):
-            sunlight = r["sunlight"] if isinstance(r["sunlight"], str) else ", ".join(r["sunlight"])
+            sunlight = (
+                r["sunlight"]
+                if isinstance(r["sunlight"], str)
+                else ", ".join(r["sunlight"])
+            )
             line += f" | Sunlight: {sunlight}"
         lines.append(line)
     return "\n".join(lines)
 
 
 @mcp.tool()
-async def get_ai_care_suggestions(common_name: str, scientific_name: str | None = None) -> str:
+async def get_ai_care_suggestions(
+    common_name: str, scientific_name: str | None = None
+) -> str:
     """Get AI-generated care recommendations for a plant species.
 
     Args:
