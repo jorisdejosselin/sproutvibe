@@ -25,9 +25,19 @@ class SproutClient:
         email = os.environ.get("SPROUT_EMAIL", "")
         password = os.environ.get("SPROUT_PASSWORD", "")
 
-        missing = [k for k, v in [("SPROUT_URL", url), ("SPROUT_EMAIL", email), ("SPROUT_PASSWORD", password)] if not v]
+        missing = [
+            k
+            for k, v in [
+                ("SPROUT_URL", url),
+                ("SPROUT_EMAIL", email),
+                ("SPROUT_PASSWORD", password),
+            ]
+            if not v
+        ]
         if missing:
-            raise SproutConfigError(f"Missing required environment variables: {', '.join(missing)}")
+            raise SproutConfigError(
+                f"Missing required environment variables: {', '.join(missing)}"
+            )
 
         self._base_url = url
         self._email = email
@@ -70,7 +80,9 @@ class SproutClient:
 
         if response.status_code == 401 and _retry:
             self._token = None
-            return await self._request(method, path, json=json, params=params, _retry=False)
+            return await self._request(
+                method, path, json=json, params=params, _retry=False
+            )
 
         if response.status_code >= 400:
             try:
@@ -78,7 +90,9 @@ class SproutClient:
             except Exception:
                 detail = response.text
             if response.status_code == 401:
-                detail = "Authentication failed — check SPROUT_EMAIL and SPROUT_PASSWORD."
+                detail = (
+                    "Authentication failed — check SPROUT_EMAIL and SPROUT_PASSWORD."
+                )
             raise SproutAPIError(response.status_code, str(detail))
 
         if response.status_code == 204 or not response.content:
@@ -152,7 +166,9 @@ class SproutClient:
         await self._request("DELETE", f"/plants/{plant_id}/schedules/{schedule_id}")
 
     async def mark_schedule_done(self, plant_id: int, schedule_id: int) -> dict:
-        return await self._request("POST", f"/plants/{plant_id}/schedules/{schedule_id}/done")
+        return await self._request(
+            "POST", f"/plants/{plant_id}/schedules/{schedule_id}/done"
+        )
 
     async def get_schedules_summary(self) -> list[dict]:
         return await self._request("GET", "/schedules/summary")
@@ -166,7 +182,9 @@ class SproutClient:
         params = {}
         if limit is not None:
             params["limit"] = limit
-        return await self._request("GET", f"/plants/{plant_id}/journal/", params=params or None)
+        return await self._request(
+            "GET", f"/plants/{plant_id}/journal/", params=params or None
+        )
 
     async def create_journal_entry(
         self,
@@ -190,7 +208,9 @@ class SproutClient:
     async def search_species(self, query: str) -> list[dict]:
         return await self._request("GET", "/plants/species/search", params={"q": query})
 
-    async def get_ai_care(self, common_name: str, scientific_name: str | None = None) -> dict:
+    async def get_ai_care(
+        self, common_name: str, scientific_name: str | None = None
+    ) -> dict:
         body: dict[str, Any] = {"common_name": common_name}
         if scientific_name is not None:
             body["scientific_name"] = scientific_name
